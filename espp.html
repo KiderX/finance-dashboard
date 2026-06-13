@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ESPP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">💰 <span>פיננסים</span></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span>דשבורד חודשי</a>
+      <a href="yearly.html"    class="nav-item"><span class="nav-icon">📅</span>סיכום שנתי</a>
+      <a href="upload.html"    class="nav-item write-only"><span class="nav-icon">⬆️</span>העלאת נתונים</a>
+      <a href="espp.html"      class="nav-item active"><span class="nav-icon">📈</span>ESPP</a>
+      <a href="networth.html"  class="nav-item"><span class="nav-icon">💎</span>שווי נקי</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info" id="user-email"></div>
+      <button class="btn btn-outline w-full" onclick="AuthManager.signOut()">יציאה</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="d-flex align-center gap-12">
+        <button class="hamburger" id="hamburger">☰</button>
+        <h1 class="page-title">מעקב ESPP</h1>
+      </div>
+      <button class="btn btn-success write-only" id="toggle-form-btn">+ הוסף מכירה</button>
+    </div>
+
+    <!-- Add sale form (hidden by default) -->
+    <div class="card write-only hidden" id="add-form">
+      <div class="card-title">רישום מכירת ESPP חדשה</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+        <div class="form-group">
+          <label>תאריך מכירה</label>
+          <input type="date" id="espp-date" />
+        </div>
+        <div class="form-group">
+          <label>מחיר מכירה למניה ($)</label>
+          <input type="number" id="espp-price" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="form-group">
+          <label>כמות מניות</label>
+          <input type="number" id="espp-shares" step="1" placeholder="0" />
+        </div>
+        <div class="form-group">
+          <label>מס שנוכה (₪)</label>
+          <input type="number" id="espp-tax" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="form-group">
+          <label>הערות</label>
+          <input type="text" id="espp-notes" placeholder="אופציונלי" />
+        </div>
+      </div>
+      <div class="d-flex gap-12 mt-16" style="align-items:center;">
+        <button class="btn btn-success" id="save-espp-btn">שמור מכירה</button>
+        <button class="btn btn-outline" id="cancel-form-btn">ביטול</button>
+        <span id="espp-save-msg"></span>
+      </div>
+    </div>
+
+    <div id="loading" class="loading"><div class="spinner"></div><span>טוען נתונים...</span></div>
+    <div id="error-container"></div>
+
+    <div id="content" class="hidden">
+      <!-- Stats -->
+      <div class="stats-grid" id="espp-stats"></div>
+
+      <!-- Chart -->
+      <div class="card">
+        <div class="card-title">הכנסות ESPP לאורך זמן</div>
+        <div class="chart-container"><canvas id="espp-chart"></canvas></div>
+      </div>
+
+      <!-- History table -->
+      <div class="card">
+        <div class="card-title">היסטוריית מכירות</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>תאריך מכירה</th><th>מחיר מניה ($)</th><th>כמות</th>
+                <th>סכום ברוטו (₪)</th><th>מס (₪)</th><th>סכום נטו (₪)</th><th>הערות</th>
+              </tr>
+            </thead>
+            <tbody id="espp-tbody"></tbody>
+            <tfoot><tr class="total-row" id="espp-tfoot"><td colspan="7"></td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/sheets.js"></script>
+<script src="js/charts.js"></script>
+<script>
+'use strict';
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadESPP() {
+  const loading = document.getElementById('loading');
+  const content = document.getElementById('content');
+  const errorContainer = document.getElementById('error-container');
+  loading.classList.remove('hidden');
+  content.classList.add('hidden');
+  errorContainer.innerHTML = '';
+
+  try {
+    const data = await SheetsAPI.getSheet(CONFIG.SHEETS.ESPP);
+    // Columns: תאריך מכירה | מחיר מכירה | כמות מניות | סכום ברוטו | מס | סכום נטו | הערות
+    const rows = data.length > 1 ? data.slice(1) : [];
+
+    const totalGross = rows.reduce((s, r) => s + parseFloat(r[3] || 0), 0);
+    const totalTax   = rows.reduce((s, r) => s + parseFloat(r[4] || 0), 0);
+    const totalNet   = rows.reduce((s, r) => s + parseFloat(r[5] || 0), 0);
+
+    document.getElementById('espp-stats').innerHTML = `
+      <div class="card" style="margin-bottom:0;"><div class="card-title">מכירות סה"כ</div><div class="card-value">${rows.length}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">ברוטו כולל</div><div class="card-value accent">${formatShekel(totalGross)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">מס כולל</div><div class="card-value expense">${formatShekel(totalTax)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">נטו כולל</div><div class="card-value income">${formatShekel(totalNet)}</div></div>
+    `;
+
+    // Chart
+    const dates = rows.map(r => r[0] || '');
+    const nets  = rows.map(r => parseFloat(r[5] || 0));
+    if (dates.length > 0) renderESPPBar('espp-chart', dates, nets);
+
+    // Table
+    const tbody = document.getElementById('espp-tbody');
+    tbody.innerHTML = '';
+    rows.forEach(r => {
+      const gross = parseFloat(r[3] || 0);
+      const tax   = parseFloat(r[4] || 0);
+      const net   = parseFloat(r[5] || 0);
+      tbody.innerHTML += `
+        <tr>
+          <td>${escHtml(r[0]||'')}</td>
+          <td>${escHtml(r[1]||'')}</td>
+          <td>${escHtml(r[2]||'')}</td>
+          <td class="amount-positive">${formatShekel(gross)}</td>
+          <td class="amount-negative">${formatShekel(tax)}</td>
+          <td class="amount-positive">${formatShekel(net)}</td>
+          <td class="text-muted">${escHtml(r[6]||'')}</td>
+        </tr>`;
+    });
+
+    document.getElementById('espp-tfoot').innerHTML = `
+      <td>סה"כ</td><td></td><td></td>
+      <td class="amount-positive">${formatShekel(totalGross)}</td>
+      <td class="amount-negative">${formatShekel(totalTax)}</td>
+      <td class="amount-positive">${formatShekel(totalNet)}</td>
+      <td></td>`;
+
+    loading.classList.add('hidden');
+    content.classList.remove('hidden');
+  } catch (err) {
+    loading.classList.add('hidden');
+    errorContainer.innerHTML = `<div class="error-msg">${err.message}</div>`;
+  }
+}
+
+async function saveESPP() {
+  const btn = document.getElementById('save-espp-btn');
+  const msg = document.getElementById('espp-save-msg');
+  btn.disabled = true;
+  btn.textContent = 'שומר...';
+
+  const date   = document.getElementById('espp-date').value;
+  const price  = parseFloat(document.getElementById('espp-price').value || 0);
+  const shares = parseFloat(document.getElementById('espp-shares').value || 0);
+  const tax    = parseFloat(document.getElementById('espp-tax').value || 0);
+  const notes  = document.getElementById('espp-notes').value;
+
+  if (!date || !price || !shares) {
+    msg.innerHTML = '<span class="text-danger">יש למלא תאריך, מחיר וכמות</span>';
+    btn.disabled = false; btn.textContent = 'שמור מכירה';
+    return;
+  }
+
+  const gross = price * shares;
+  const net   = gross - tax;
+
+  try {
+    await SheetsAPI.appendRows(CONFIG.SHEETS.ESPP, [[date, price, shares, gross, tax, net, notes]]);
+    msg.innerHTML = '<span class="text-success">נשמר ✓</span>';
+    setTimeout(() => { msg.innerHTML = ''; }, 3000);
+    document.getElementById('add-form').classList.add('hidden');
+    await loadESPP();
+  } catch (err) {
+    msg.innerHTML = `<span class="text-danger">${err.message}</span>`;
+  } finally {
+    btn.disabled = false; btn.textContent = 'שמור מכירה';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('hamburger').addEventListener('click', () =>
+    document.getElementById('sidebar').classList.toggle('open'));
+
+  const email = await AuthManager.init();
+  if (!email) return;
+  document.getElementById('user-email').textContent = email;
+
+  document.getElementById('toggle-form-btn').addEventListener('click', () =>
+    document.getElementById('add-form').classList.toggle('hidden'));
+  document.getElementById('cancel-form-btn').addEventListener('click', () =>
+    document.getElementById('add-form').classList.add('hidden'));
+  document.getElementById('save-espp-btn').addEventListener('click', saveESPP);
+
+  await loadESPP();
+});
+</script>
+</body>
+</html>

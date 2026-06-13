@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>שווי נקי</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">💰 <span>פיננסים</span></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span>דשבורד חודשי</a>
+      <a href="yearly.html"    class="nav-item"><span class="nav-icon">📅</span>סיכום שנתי</a>
+      <a href="upload.html"    class="nav-item write-only"><span class="nav-icon">⬆️</span>העלאת נתונים</a>
+      <a href="espp.html"      class="nav-item"><span class="nav-icon">📈</span>ESPP</a>
+      <a href="networth.html"  class="nav-item active"><span class="nav-icon">💎</span>שווי נקי</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info" id="user-email"></div>
+      <button class="btn btn-outline w-full" onclick="AuthManager.signOut()">יציאה</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="d-flex align-center gap-12">
+        <button class="hamburger" id="hamburger">☰</button>
+        <h1 class="page-title">מעקב שווי נקי</h1>
+      </div>
+      <button class="btn btn-success write-only" id="toggle-form-btn">+ עדכן חודש</button>
+    </div>
+
+    <!-- Entry form -->
+    <div class="card write-only hidden" id="add-form">
+      <div class="card-title">רישום שווי נקי חודשי</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+        <div class="form-group">
+          <label>חודש (MM/YYYY)</label>
+          <input type="text" id="nw-month" placeholder="MM/YYYY" />
+        </div>
+        <div class="form-group">
+          <label>תיק השקעות (₪)</label>
+          <input type="number" id="nw-portfolio" step="1" placeholder="0" />
+        </div>
+        <div class="form-group">
+          <label>קרן כספית (₪)</label>
+          <input type="number" id="nw-cashfund" step="1" placeholder="0" />
+        </div>
+        <div class="form-group">
+          <label>חסכונות (₪)</label>
+          <input type="number" id="nw-savings" step="1" placeholder="0" />
+        </div>
+      </div>
+      <div class="d-flex gap-12 mt-16" style="align-items:center;">
+        <button class="btn btn-success" id="save-nw-btn">שמור</button>
+        <button class="btn btn-outline" id="cancel-form-btn">ביטול</button>
+        <span id="nw-save-msg"></span>
+      </div>
+    </div>
+
+    <div id="loading" class="loading"><div class="spinner"></div><span>טוען נתונים...</span></div>
+    <div id="error-container"></div>
+
+    <div id="content" class="hidden">
+      <!-- Latest snapshot stats -->
+      <div class="stats-grid" id="nw-stats"></div>
+
+      <div class="dashboard-grid">
+        <!-- Total net worth line -->
+        <div class="card">
+          <div class="card-title">שווי נקי כולל לאורך זמן</div>
+          <div class="chart-container-lg"><canvas id="nw-total-chart"></canvas></div>
+        </div>
+
+        <!-- Breakdown stacked area -->
+        <div class="card">
+          <div class="card-title">פירוט לפי נכס</div>
+          <div class="chart-container-lg"><canvas id="nw-breakdown-chart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- History table -->
+      <div class="card">
+        <div class="card-title">היסטוריה</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>חודש</th><th>תיק השקעות</th><th>קרן כספית</th>
+                <th>חסכונות</th><th>סה"כ שווי נקי</th>
+              </tr>
+            </thead>
+            <tbody id="nw-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/sheets.js"></script>
+<script src="js/charts.js"></script>
+<script>
+'use strict';
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadNetWorth() {
+  const loading = document.getElementById('loading');
+  const content = document.getElementById('content');
+  const errorContainer = document.getElementById('error-container');
+  loading.classList.remove('hidden');
+  content.classList.add('hidden');
+  errorContainer.innerHTML = '';
+
+  try {
+    const data = await SheetsAPI.getSheet(CONFIG.SHEETS.NET_WORTH);
+    // Columns: חודש | תיק השקעות | קרן כספית | חסכונות | סה"כ שווי נקי
+    const rows = data.length > 1 ? data.slice(1) : [];
+
+    const latest = rows[rows.length - 1] || [];
+    const latestPortfolio = parseFloat(latest[1] || 0);
+    const latestCash      = parseFloat(latest[2] || 0);
+    const latestSavings   = parseFloat(latest[3] || 0);
+    const latestTotal     = parseFloat(latest[4] || 0) || (latestPortfolio + latestCash + latestSavings);
+
+    document.getElementById('nw-stats').innerHTML = `
+      <div class="card" style="margin-bottom:0;"><div class="card-title">תיק השקעות</div><div class="card-value accent">${formatShekel(latestPortfolio)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">קרן כספית</div><div class="card-value accent">${formatShekel(latestCash)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">חסכונות</div><div class="card-value accent">${formatShekel(latestSavings)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">סה"כ שווי נקי</div><div class="card-value income">${formatShekel(latestTotal)}</div></div>
+    `;
+
+    const months    = rows.map(r => r[0] || '');
+    const portfolio = rows.map(r => parseFloat(r[1] || 0));
+    const cashFund  = rows.map(r => parseFloat(r[2] || 0));
+    const savings   = rows.map(r => parseFloat(r[3] || 0));
+    const totals    = rows.map((r, i) => parseFloat(r[4] || 0) || portfolio[i] + cashFund[i] + savings[i]);
+
+    if (months.length > 0) {
+      renderNetWorthLine('nw-total-chart', months, totals);
+      renderNetWorthStackedArea('nw-breakdown-chart', months, portfolio, cashFund, savings);
+    }
+
+    // Table
+    const tbody = document.getElementById('nw-tbody');
+    tbody.innerHTML = '';
+    rows.forEach((r, i) => {
+      tbody.innerHTML += `
+        <tr>
+          <td>${escHtml(r[0]||'')}</td>
+          <td class="amount-positive">${formatShekel(portfolio[i])}</td>
+          <td class="amount-positive">${formatShekel(cashFund[i])}</td>
+          <td class="amount-positive">${formatShekel(savings[i])}</td>
+          <td class="amount-positive" style="font-weight:700;">${formatShekel(totals[i])}</td>
+        </tr>`;
+    });
+
+    loading.classList.add('hidden');
+    content.classList.remove('hidden');
+  } catch (err) {
+    loading.classList.add('hidden');
+    errorContainer.innerHTML = `<div class="error-msg">${err.message}</div>`;
+  }
+}
+
+async function saveNetWorth() {
+  const btn = document.getElementById('save-nw-btn');
+  const msg = document.getElementById('nw-save-msg');
+  btn.disabled = true;
+  btn.textContent = 'שומר...';
+
+  const month     = document.getElementById('nw-month').value.trim();
+  const portfolio = parseFloat(document.getElementById('nw-portfolio').value || 0);
+  const cashFund  = parseFloat(document.getElementById('nw-cashfund').value || 0);
+  const savings   = parseFloat(document.getElementById('nw-savings').value || 0);
+
+  if (!month || !/^\d{2}\/\d{4}$/.test(month)) {
+    msg.innerHTML = '<span class="text-danger">יש להזין חודש בפורמט MM/YYYY</span>';
+    btn.disabled = false; btn.textContent = 'שמור';
+    return;
+  }
+
+  const total = portfolio + cashFund + savings;
+
+  try {
+    // Check if month exists and update, otherwise append
+    const existing = await SheetsAPI.getSheet(CONFIG.SHEETS.NET_WORTH);
+    const rowNum = SheetsAPI.findMonthRow(existing, month);
+    const rowData = [month, portfolio, cashFund, savings, total];
+
+    if (rowNum === -1) {
+      await SheetsAPI.appendRows(CONFIG.SHEETS.NET_WORTH, [rowData]);
+    } else {
+      await SheetsAPI.updateRange(CONFIG.SHEETS.NET_WORTH, `A${rowNum}:E${rowNum}`, [rowData]);
+    }
+
+    msg.innerHTML = '<span class="text-success">נשמר ✓</span>';
+    setTimeout(() => { msg.innerHTML = ''; }, 3000);
+    document.getElementById('add-form').classList.add('hidden');
+    await loadNetWorth();
+  } catch (err) {
+    msg.innerHTML = `<span class="text-danger">${err.message}</span>`;
+  } finally {
+    btn.disabled = false; btn.textContent = 'שמור';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('hamburger').addEventListener('click', () =>
+    document.getElementById('sidebar').classList.toggle('open'));
+
+  const email = await AuthManager.init();
+  if (!email) return;
+  document.getElementById('user-email').textContent = email;
+
+  // Pre-fill current month
+  const now = new Date();
+  document.getElementById('nw-month').value =
+    `${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+
+  document.getElementById('toggle-form-btn').addEventListener('click', () =>
+    document.getElementById('add-form').classList.toggle('hidden'));
+  document.getElementById('cancel-form-btn').addEventListener('click', () =>
+    document.getElementById('add-form').classList.add('hidden'));
+  document.getElementById('save-nw-btn').addEventListener('click', saveNetWorth);
+
+  await loadNetWorth();
+});
+</script>
+</body>
+</html>

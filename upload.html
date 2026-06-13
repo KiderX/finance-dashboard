@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>העלאת נתונים</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">💰 <span>פיננסים</span></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span>דשבורד חודשי</a>
+      <a href="yearly.html"    class="nav-item"><span class="nav-icon">📅</span>סיכום שנתי</a>
+      <a href="upload.html"    class="nav-item active"><span class="nav-icon">⬆️</span>העלאת נתונים</a>
+      <a href="espp.html"      class="nav-item"><span class="nav-icon">📈</span>ESPP</a>
+      <a href="networth.html"  class="nav-item"><span class="nav-icon">💎</span>שווי נקי</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info" id="user-email"></div>
+      <button class="btn btn-outline w-full" onclick="AuthManager.signOut()">יציאה</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="d-flex align-center gap-12">
+        <button class="hamburger" id="hamburger">☰</button>
+        <h1 class="page-title">העלאת נתונים</h1>
+      </div>
+    </div>
+
+    <!-- Progress steps -->
+    <div class="steps">
+      <div class="step active" id="step-1"><span class="step-num">1</span>בחירת קובץ</div>
+      <div class="step"        id="step-2"><span class="step-num">2</span>עריכת עסקאות</div>
+      <div class="step"        id="step-3"><span class="step-num">3</span>בדיקת כפילויות</div>
+      <div class="step"        id="step-4"><span class="step-num">4</span>בחירת חודש</div>
+      <div class="step"        id="step-5"><span class="step-num">5</span>אישור העלאה</div>
+    </div>
+
+    <div id="upload-error" class="mb-16"></div>
+
+    <!-- Step 1: Drop zone -->
+    <div class="step-content" id="step-content-1">
+      <div class="card">
+        <div class="upload-zone" id="upload-zone">
+          <div class="upload-zone-icon">📂</div>
+          <div class="upload-zone-text">גרור לכאן קובץ CSV</div>
+          <div class="upload-zone-hint">או לחץ לבחירת קובץ</div>
+        </div>
+        <input type="file" id="file-input" accept=".csv" style="display:none;" />
+        <p class="text-muted mt-16" style="font-size:0.85rem;">
+          יש להריץ תחילה את <code>normalizer.py</code> על קובץ ה-Excel של Cal כדי לקבל CSV תקני.
+        </p>
+      </div>
+    </div>
+
+    <!-- Step 2: Preview & edit -->
+    <div class="step-content hidden" id="step-content-2">
+      <div class="card">
+        <div class="d-flex justify-between align-center mb-16">
+          <div class="card-title mb-0">עסקאות בקובץ — <span id="preview-count"></span></div>
+          <button class="btn btn-primary" id="check-dupes-btn">בדוק כפילויות והמשך ▶</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>תאריך</th><th>שם בית עסק</th><th>סכום</th>
+                <th>קטגוריה</th><th>סוג</th><th>הערות</th><th>פיצול</th>
+              </tr>
+            </thead>
+            <tbody id="preview-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Duplicate results -->
+    <div class="step-content hidden" id="step-content-3">
+      <div class="card">
+        <div class="card-title">תוצאות בדיקת כפילויות</div>
+        <p id="dupe-count" class="mb-16" style="font-size:1rem;font-weight:600;"></p>
+        <p class="text-muted mb-16" style="font-size:0.85rem;">שורות מסומנות באדום כבר קיימות בגיליון ולא יועלו.</p>
+        <button class="btn btn-primary" id="proceed-to-month-btn">המשך לבחירת חודש ▶</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Month selection -->
+    <div class="step-content hidden" id="step-content-4">
+      <div class="card">
+        <div class="card-title">בחירת חודש</div>
+        <div class="form-group" style="max-width:240px;">
+          <label>חודש העסקאות (MM/YYYY)</label>
+          <input type="text" id="month-select" placeholder="MM/YYYY" pattern="\d{2}/\d{4}" />
+        </div>
+        <button class="btn btn-primary" id="upload-btn">העלה לגוגל שיטס ▶</button>
+        <div id="upload-result" class="mt-16"></div>
+      </div>
+    </div>
+
+    <!-- Step 5: Success -->
+    <div class="step-content hidden" id="step-content-5">
+      <div class="card" style="text-align:center;padding:48px;">
+        <div style="font-size:3rem;margin-bottom:16px;">✅</div>
+        <h2 style="margin-bottom:16px;">העלאה הושלמה בהצלחה!</h2>
+        <div id="success-summary" class="text-muted mb-16"></div>
+        <div class="d-flex gap-12" style="justify-content:center;">
+          <a href="dashboard.html" class="btn btn-primary">לדשבורד</a>
+          <button class="btn btn-outline" id="restart-btn">העלאה נוספת</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Split modal -->
+<div class="modal-overlay" id="split-modal">
+  <div class="modal">
+    <div class="modal-title">פיצול עסקה — <span id="split-merchant"></span></div>
+    <p class="text-muted mb-16" style="font-size:0.85rem;">סכום מקורי: <strong id="split-total"></strong></p>
+    <div id="split-rows-container"></div>
+    <button class="btn btn-outline btn-sm mt-8" id="add-split-row-btn">+ הוסף שורה</button>
+    <p class="mt-16" style="font-size:0.9rem;">יתרה לפיצול: <strong id="split-remaining" class="text-accent">₪0</strong></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="cancel-split-btn">ביטול</button>
+      <button class="btn btn-success" id="confirm-split-btn">אשר פיצול</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/sheets.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/upload.js"></script>
+</body>
+</html>

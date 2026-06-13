@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>דשבורד חודשי</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">💰 <span>פיננסים</span></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item active"><span class="nav-icon">📊</span>דשבורד חודשי</a>
+      <a href="yearly.html"    class="nav-item"><span class="nav-icon">📅</span>סיכום שנתי</a>
+      <a href="upload.html"    class="nav-item write-only"><span class="nav-icon">⬆️</span>העלאת נתונים</a>
+      <a href="espp.html"      class="nav-item"><span class="nav-icon">📈</span>ESPP</a>
+      <a href="networth.html"  class="nav-item"><span class="nav-icon">💎</span>שווי נקי</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info" id="user-email"></div>
+      <button class="btn btn-outline w-full" onclick="AuthManager.signOut()">יציאה</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="d-flex align-center gap-12">
+        <button class="hamburger" id="hamburger">☰</button>
+        <h1 class="page-title">דשבורד חודשי</h1>
+      </div>
+      <div class="month-nav">
+        <button class="btn btn-outline btn-sm" id="prev-month">◀</button>
+        <span class="month-display" id="month-display">—</span>
+        <button class="btn btn-outline btn-sm" id="next-month">▶</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading"><div class="spinner"></div><span>טוען נתונים...</span></div>
+    <div id="error-container"></div>
+
+    <div id="content" class="hidden">
+      <!-- Stats row -->
+      <div class="stats-grid">
+        <div class="card"><div class="card-title">סה"כ הכנסות</div><div class="card-value income" id="stat-income">₪0</div></div>
+        <div class="card"><div class="card-title">סה"כ הוצאות</div><div class="card-value expense" id="stat-expenses">₪0</div></div>
+        <div class="card"><div class="card-title">רווח</div><div class="card-value" id="stat-profit">₪0</div></div>
+        <div class="card"><div class="card-title">אחוז חיסכון</div><div class="card-value" id="stat-savings-rate">0%</div></div>
+      </div>
+
+      <div class="dashboard-grid">
+        <!-- Income panel -->
+        <div class="card">
+          <div class="d-flex justify-between align-center mb-16">
+            <div class="card-title mb-0">הכנסות</div>
+            <button class="btn btn-sm btn-success write-only" id="save-income-btn">שמור</button>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>סוג הכנסה</th><th>סכום (₪)</th><th class="write-only">עריכה</th></tr></thead>
+              <tbody id="income-table-body"></tbody>
+              <tfoot><tr class="total-row"><td>סה"כ</td><td id="income-total-cell">₪0</td><td class="write-only"></td></tr></tfoot>
+            </table>
+          </div>
+          <div id="income-save-msg" class="mt-8"></div>
+        </div>
+
+        <!-- Expenses panel -->
+        <div class="card">
+          <div class="card-title">הוצאות לפי קטגוריה</div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>קטגוריה</th><th>סכום (₪)</th></tr></thead>
+              <tbody id="expenses-table-body"></tbody>
+              <tfoot><tr class="total-row"><td>סה"כ</td><td id="expenses-total-cell">₪0</td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="card">
+          <div class="card-title">הוצאות מול הכנסות</div>
+          <div class="chart-container"><canvas id="income-expense-chart"></canvas></div>
+        </div>
+
+        <!-- Profit allocation (write-only) -->
+        <div class="card write-only">
+          <div class="d-flex justify-between align-center mb-16">
+            <div class="card-title mb-0">פיזור רווחים</div>
+            <button class="btn btn-sm btn-success" id="save-allocation-btn">שמור</button>
+          </div>
+          <p class="text-muted mb-16" style="font-size:0.85rem;">רווח לחלוקה: <strong class="text-accent" id="profit-to-allocate">₪0</strong></p>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>יעד</th><th>סכום (₪)</th></tr></thead>
+              <tbody>
+                <tr><td>עו"ש</td><td><input type="number" class="input-inline allocation-input" placeholder="0" /></td></tr>
+                <tr><td>קרן כספית</td><td><input type="number" class="input-inline allocation-input" placeholder="0" /></td></tr>
+                <tr><td>השקעות</td><td><input type="number" class="input-inline allocation-input" placeholder="0" /></td></tr>
+                <tr><td>אחר</td><td><input type="number" class="input-inline allocation-input" placeholder="0" /></td></tr>
+              </tbody>
+              <tfoot><tr class="total-row"><td>סה"כ מוקצה</td><td id="allocation-total-cell">₪0</td></tr></tfoot>
+            </table>
+          </div>
+          <div id="allocation-save-msg" class="mt-8"></div>
+        </div>
+
+        <!-- Transactions list -->
+        <div class="card" style="grid-column:1/-1;">
+          <div class="d-flex justify-between align-center mb-16">
+            <div class="card-title mb-0">עסקאות החודש</div>
+            <span id="transaction-count" class="badge badge-info"></span>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>תאריך</th><th>שם בית עסק</th><th>סכום</th>
+                  <th>קטגוריה</th><th>סוג</th><th>הערות</th>
+                </tr>
+              </thead>
+              <tbody id="transactions-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/sheets.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>דשבורד פיננסי — כניסה</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-logo">💰</div>
+      <h1 class="login-title">דשבורד פיננסי</h1>
+      <p class="login-subtitle">מעקב הוצאות, הכנסות ושווי נקי</p>
+
+      <div id="error-container"></div>
+
+      <button id="login-btn" class="google-btn" style="margin-top:24px;">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+        <span>התחבר עם Google</span>
+      </button>
+
+      <p class="text-muted mt-16" style="font-size:0.8rem;">
+        גישה מוגבלת לבעל החשבון המורשה בלבד
+      </p>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    'use strict';
+    document.addEventListener('DOMContentLoaded', () => {
+      if (AuthManager.getToken()) {
+        window.location.href = 'dashboard.html';
+        return;
+      }
+
+      const loginBtn = document.getElementById('login-btn');
+      const errorContainer = document.getElementById('error-container');
+
+      loginBtn.addEventListener('click', async () => {
+        loginBtn.disabled = true;
+        loginBtn.querySelector('span').textContent = 'מתחבר...';
+        errorContainer.innerHTML = '';
+        try {
+          await AuthManager.login();
+          window.location.href = 'dashboard.html';
+        } catch (err) {
+          errorContainer.innerHTML = `<div class="error-msg mt-16">${err.message || 'שגיאה בהתחברות. נסה שוב.'}</div>`;
+          loginBtn.disabled = false;
+          loginBtn.querySelector('span').textContent = 'התחבר עם Google';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

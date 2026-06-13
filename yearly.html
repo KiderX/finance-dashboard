@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>סיכום שנתי</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">💰 <span>פיננסים</span></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span>דשבורד חודשי</a>
+      <a href="yearly.html"    class="nav-item active"><span class="nav-icon">📅</span>סיכום שנתי</a>
+      <a href="upload.html"    class="nav-item write-only"><span class="nav-icon">⬆️</span>העלאת נתונים</a>
+      <a href="espp.html"      class="nav-item"><span class="nav-icon">📈</span>ESPP</a>
+      <a href="networth.html"  class="nav-item"><span class="nav-icon">💎</span>שווי נקי</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info" id="user-email"></div>
+      <button class="btn btn-outline w-full" onclick="AuthManager.signOut()">יציאה</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="d-flex align-center gap-12">
+        <button class="hamburger" id="hamburger">☰</button>
+        <h1 class="page-title">סיכום שנתי</h1>
+      </div>
+      <div class="year-nav">
+        <button class="btn btn-outline btn-sm" id="prev-year">◀</button>
+        <span class="year-display" id="year-display">—</span>
+        <button class="btn btn-outline btn-sm" id="next-year">▶</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading"><div class="spinner"></div><span>טוען נתונים...</span></div>
+    <div id="error-container"></div>
+
+    <div id="content" class="hidden">
+      <!-- Monthly summary table -->
+      <div class="card">
+        <div class="card-title">סיכום הכנסות והוצאות חודשיות</div>
+        <div class="table-wrapper">
+          <table id="yearly-summary-table">
+            <thead>
+              <tr>
+                <th>חודש</th>
+                <th>הכנסות</th>
+                <th>הוצאות</th>
+                <th>רווח</th>
+                <th>אחוז חיסכון</th>
+              </tr>
+            </thead>
+            <tbody id="yearly-summary-tbody"></tbody>
+            <tfoot><tr class="total-row"><td colspan="5"></td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <!-- Income vs Expenses bar chart -->
+        <div class="card">
+          <div class="card-title">הכנסות מול הוצאות שנתי</div>
+          <div class="chart-container-lg"><canvas id="yearly-income-expense-chart"></canvas></div>
+        </div>
+
+        <!-- Savings rate line chart -->
+        <div class="card">
+          <div class="card-title">אחוז חיסכון לאורך זמן</div>
+          <div class="chart-container-lg"><canvas id="savings-rate-chart"></canvas></div>
+        </div>
+
+        <!-- Allocation donut -->
+        <div class="card">
+          <div class="card-title">פיזור כספים שנתי</div>
+          <div class="chart-container"><canvas id="allocation-donut-chart"></canvas></div>
+        </div>
+
+        <!-- ESPP summary -->
+        <div class="card">
+          <div class="card-title">סיכום ESPP שנתי</div>
+          <div id="espp-summary"><p class="text-muted">טוען...</p></div>
+          <div class="chart-container mt-16"><canvas id="espp-yearly-chart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- YoY comparison -->
+      <div class="card">
+        <div class="card-title">השוואה שנה על שנה</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>חודש</th>
+                <th id="yoy-income-cur">הכנסות</th>
+                <th id="yoy-expense-cur">הוצאות</th>
+                <th id="yoy-income-prev">הכנסות (שנה קודמת)</th>
+                <th id="yoy-expense-prev">הוצאות (שנה קודמת)</th>
+                <th>שינוי הכנסות</th>
+                <th>שינוי הוצאות</th>
+              </tr>
+            </thead>
+            <tbody id="yoy-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recurring transactions -->
+      <div class="card">
+        <div class="card-title">הוראות קבע (חוזרות 3+ חודשים)</div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>שם בית עסק</th><th>חודשים</th><th>ממוצע חודשי</th></tr></thead>
+            <tbody id="recurring-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/sheets.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/yearly.js"></script>
+</body>
+</html>
