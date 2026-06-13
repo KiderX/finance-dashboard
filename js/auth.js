@@ -150,7 +150,7 @@ const AuthManager = (() => {
     return new Promise((resolve, reject) => {
       resolveTokenPromise = resolve;
       rejectTokenPromise = reject;
-      tokenClient.requestAccessToken({ prompt: 'consent' });
+      tokenClient.requestAccessToken({ prompt: 'select_account' });
     });
   }
 
