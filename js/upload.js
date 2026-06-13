@@ -39,15 +39,16 @@ function parseCSVLine(line, delimiter = ',') {
 }
 
 function parseCSV(text) {
-  // Strip BOM if present (Excel on Windows/Hebrew systems adds it)
+  // Strip BOM — pandas utf-8-sig adds ﻿ at start of file
   const clean = text.replace(/^﻿/, '');
   const lines = clean.split(/\r?\n/).filter(l => l.trim());
   if (lines.length < 2) throw new Error('הקובץ ריק או אינו תקין');
 
-  // Auto-detect delimiter: semicolons are common in Israeli Excel exports
+  // Auto-detect delimiter: semicolons are common in Israeli/European Excel exports
   const delim = lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
 
-  const headers = parseCSVLine(lines[0], delim).map(h => h.trim());
+  // Strip BOM again from first header in case it survived (belt-and-suspenders)
+  const headers = parseCSVLine(lines[0], delim).map(h => h.replace(/^﻿/, '').trim());
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
     const vals = parseCSVLine(lines[i], delim);
@@ -57,6 +58,21 @@ function parseCSV(text) {
     rows.push(row);
   }
   return rows;
+}
+
+// Flexible column lookup — matches exact name, partial containment, or BOM-prefixed variant.
+// Accepts multiple candidate names in priority order (e.g. normalizer name first, raw Cal name second).
+function getCol(row, ...candidates) {
+  const keys = Object.keys(row);
+  for (const cand of candidates) {
+    if (row[cand] !== undefined && row[cand] !== '') return row[cand];
+    const match = keys.find(k => {
+      const norm = k.replace(/^﻿/, '').trim();
+      return norm === cand || norm.includes(cand);
+    });
+    if (match && row[match] !== '') return row[match];
+  }
+  return '';
 }
 
 // ── Step management ───────────────────────────────────────
@@ -112,12 +128,14 @@ function handleFile(file) {
         showError('הקובץ אינו מכיל עסקאות. ודא שהרצת את normalizer.py וקובץ ה-CSV תקין.');
         return;
       }
-      // Warn if expected columns are missing
-      const expected = ['תאריך', 'שם בית עסק', 'סכום חיוב'];
-      const found = Object.keys(rows[0]);
-      const missing = expected.filter(c => !found.includes(c));
-      if (missing.length > 0) {
-        showError(`עמודות חסרות: ${missing.join(', ')}. עמודות שנמצאו: ${found.join(', ')}. ודא שהרצת את normalizer.py.`);
+      // Check we can find at least a date or merchant column
+      const sample = rows[0];
+      const hasDate     = !!getCol(sample, 'תאריך', 'תאריך עסקה');
+      const hasMerchant = !!getCol(sample, 'שם בית עסק', 'בית עסק');
+      const hasAmount   = !!getCol(sample, 'סכום חיוב', 'סכום עסקה', 'סכום');
+      if (!hasDate && !hasMerchant && !hasAmount) {
+        const found = Object.keys(sample).join(', ');
+        showError(`לא ניתן לזהות עמודות עסקאות. עמודות שנמצאו: ${found}. ודא שהרצת את normalizer.py.`);
         return;
       }
       UploadState.rows = rows;
@@ -138,24 +156,30 @@ function renderPreview(rows) {
   document.getElementById('preview-count').textContent = `${rows.length} עסקאות`;
 
   rows.forEach((row, idx) => {
-    const amt = parseFloat(row['סכום חיוב'] || 0);
+    const date     = getCol(row, 'תאריך', 'תאריך עסקה');
+    const merchant = getCol(row, 'שם בית עסק', 'בית עסק');
+    const amtRaw   = getCol(row, 'סכום חיוב', 'סכום עסקה', 'סכום');
+    const amt      = parseFloat(String(amtRaw).replace(/[₪,\s]/g, '')) || 0;
+    const category = getCol(row, 'קטגוריה') || '';
+    const txnType  = getCol(row, 'סוג עסקה', 'סוג');
+    const notes    = getCol(row, 'הערות');
     const tr  = document.createElement('tr');
     tr.dataset.idx = idx;
     tr.innerHTML = `
-      <td>${escHtml(row['תאריך'] || '')}</td>
-      <td>${escHtml(row['שם בית עסק'] || '')}</td>
+      <td>${escHtml(date)}</td>
+      <td>${escHtml(merchant)}</td>
       <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>
       <td>
         <select class="input-inline cat-select" data-idx="${idx}">
           ${CONFIG.CATEGORIES.map(c =>
-            `<option value="${c}" ${c === row['קטגוריה'] ? 'selected' : ''}>${c}</option>`
+            `<option value="${c}" ${c === category ? 'selected' : ''}>${c}</option>`
           ).join('')}
         </select>
       </td>
-      <td class="text-muted">${escHtml(row['סוג עסקה'] || '')}</td>
+      <td class="text-muted">${escHtml(txnType)}</td>
       <td>
         <input type="text" class="input-inline notes-input" data-idx="${idx}"
-               value="${escHtml(row['הערות'] || '')}" placeholder="הערות" />
+               value="${escHtml(notes)}" placeholder="הערות" />
       </td>
       <td>
         <button class="btn btn-sm btn-outline split-btn" data-idx="${idx}">פצל</button>
@@ -186,7 +210,12 @@ async function runDuplicateCheck() {
     const tbody = document.getElementById('preview-tbody');
 
     UploadState.rows.forEach((row, idx) => {
-      const hash = generateHash(row['תאריך'], row['שם בית עסק'], row['סכום חיוב']);
+      const amtRaw = getCol(row, 'סכום חיוב', 'סכום עסקה', 'סכום');
+      const hash = generateHash(
+        getCol(row, 'תאריך', 'תאריך עסקה'),
+        getCol(row, 'שם בית עסק', 'בית עסק'),
+        parseFloat(String(amtRaw).replace(/[₪,\s]/g, '')) || 0
+      );
       if (UploadState.existingHashes.has(hash)) {
         UploadState.duplicates.add(idx);
         const tr = tbody.querySelector(`tr[data-idx="${idx}"]`);
@@ -232,19 +261,17 @@ async function doUpload() {
     const toUpload = UploadState.rows
       .filter((_, idx) => !UploadState.duplicates.has(idx))
       .map(row => {
-        const hash = generateHash(row['תאריך'], row['שם בית עסק'], row['סכום חיוב']);
-        return [
-          row['תאריך']      || '',
-          row['שם בית עסק'] || '',
-          parseFloat(row['סכום חיוב'] || 0),
-          row['קטגוריה']   || 'שונות',
-          row['סוג עסקה']  || '',
-          row['הערות']     || '',
-          month,
-          row['מקור כרטיס'] || '',
-          row['פוצל']       || 'FALSE',
-          hash,
-        ];
+        const date     = getCol(row, 'תאריך', 'תאריך עסקה');
+        const merchant = getCol(row, 'שם בית עסק', 'בית עסק');
+        const amtRaw   = getCol(row, 'סכום חיוב', 'סכום עסקה', 'סכום');
+        const amount   = parseFloat(String(amtRaw).replace(/[₪,\s]/g, '')) || 0;
+        const category = getCol(row, 'קטגוריה') || 'שונות';
+        const txnType  = getCol(row, 'סוג עסקה', 'סוג');
+        const notes    = getCol(row, 'הערות');
+        const source   = getCol(row, 'מקור כרטיס');
+        const split    = getCol(row, 'פוצל') || 'FALSE';
+        const hash     = generateHash(date, merchant, amount);
+        return [date, merchant, amount, category, txnType, notes, month, source, split, hash];
       });
 
     if (toUpload.length === 0) throw new Error('אין עסקאות חדשות להעלאה (כל העסקאות כבר קיימות)');
