@@ -241,10 +241,17 @@ async function handleSetup(btn) {
   try {
     const count = await SheetsAPI.initializeSpreadsheet();
     btn.textContent = count > 0 ? `✓ נוצרו ${count} גיליונות` : '✓ כבר מוגדר';
+    localStorage.setItem('sheetInitialized', '1');
     setTimeout(() => location.reload(), 1500);
   } catch (err) {
-    btn.textContent = '⚙️ הגדרת גיליון';
+    btn.textContent = '⚙️ הגדרה ראשונית';
     btn.disabled = false;
     alert('שגיאה: ' + err.message);
   }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('sheetInitialized')) {
+    document.querySelectorAll('[data-role="setup"]').forEach(el => el.remove());
+  }
+});
