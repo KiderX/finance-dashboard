@@ -235,23 +235,28 @@ const SheetsAPI = (() => {
   };
 })();
 
-async function handleSetup(btn) {
-  btn.disabled = true;
-  btn.textContent = 'מגדיר...';
-  try {
-    const count = await SheetsAPI.initializeSpreadsheet();
-    btn.textContent = count > 0 ? `✓ נוצרו ${count} גיליונות` : '✓ כבר מוגדר';
-    localStorage.setItem('sheetInitialized', '1');
-    setTimeout(() => location.reload(), 1500);
-  } catch (err) {
-    btn.textContent = '⚙️ הגדרה ראשונית';
-    btn.disabled = false;
-    alert('שגיאה: ' + err.message);
-  }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.querySelector('[data-role="setup"]');
+  if (!btn) return;
+
   if (localStorage.getItem('sheetInitialized')) {
-    document.querySelectorAll('[data-role="setup"]').forEach(el => el.remove());
+    btn.remove();
+    return;
   }
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'מגדיר...';
+    try {
+      const count = await SheetsAPI.initializeSpreadsheet();
+      const msg = count > 0 ? `✓ נוצרו ${count} גיליונות בהצלחה!` : '✓ הגיליון כבר מוגדר';
+      alert(msg);
+      localStorage.setItem('sheetInitialized', '1');
+      btn.remove();
+    } catch (err) {
+      btn.textContent = '⚙️ הגדרה ראשונית';
+      btn.disabled = false;
+      alert('שגיאה: ' + err.message);
+    }
+  });
 });
