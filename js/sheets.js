@@ -172,6 +172,56 @@ const SheetsAPI = (() => {
     return -1;
   }
 
+  /**
+   * Creates all required sheet tabs and writes headers.
+   * Safe to call on an already-initialized spreadsheet — skips existing tabs.
+   * @returns {Promise<number>} Number of new tabs created.
+   */
+  async function initializeSpreadsheet() {
+    const SHEET_DEFS = [
+      { name: CONFIG.SHEETS.TRANSACTIONS,      headers: ['תאריך','שם בית עסק','סכום חיוב','קטגוריה','סוג עסקה','הערות','חודש','מקור כרטיס','פוצל','מזהה ייחודי'] },
+      { name: CONFIG.SHEETS.INCOME,            headers: ['חודש','משכורת ראשונה','משכורת שנייה','בונוסים','ESPP','הכנסות נוספות','סה"כ הכנסות','הערות'] },
+      { name: CONFIG.SHEETS.MONTHLY_SUMMARY,   headers: ['חודש','סה"כ הוצאות','סה"כ הכנסות','רווח','אחוז חיסכון'] },
+      { name: CONFIG.SHEETS.PROFIT_ALLOCATION, headers: ['חודש','רווח','עו"ש','קרן כספית','השקעות','אחר','סה"כ מוקצה','הערות'] },
+      { name: CONFIG.SHEETS.NET_WORTH,         headers: ['חודש','תיק השקעות','קרן כספית','חסכונות','סה"כ שווי נקי'] },
+      { name: CONFIG.SHEETS.ESPP,              headers: ['תאריך מכירה','מחיר מכירה','כמות מניות','סכום ברוטו','מס','סכום נטו','הערות'] },
+      { name: CONFIG.SHEETS.AUDIT_LOG,         headers: ['תאריך העלאה','שם קובץ','מספר עסקאות','סכום כולל','משתמש','כפילויות שנדחו'] },
+      { name: CONFIG.SHEETS.DASHBOARD,         headers: [] },
+    ];
+
+    // Find which tabs already exist
+    const metaRes = await fetch(`${baseUrl()}?fields=sheets.properties.title`, { headers: authHeaders() });
+    const meta = await handleResponse(metaRes);
+    const existing = new Set((meta.sheets || []).map(s => s.properties.title));
+
+    // Create only missing tabs
+    const missing = SHEET_DEFS.filter(s => !existing.has(s.name));
+    if (missing.length > 0) {
+      const res = await fetch(`${baseUrl()}:batchUpdate`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ requests: missing.map(s => ({ addSheet: { properties: { title: s.name } } })) }),
+      });
+      await handleResponse(res);
+    }
+
+    // Write headers to all tabs (safe — only overwrites row 1)
+    const headerRanges = SHEET_DEFS
+      .filter(s => s.headers.length > 0)
+      .map(s => ({ range: `${s.name}!A1`, values: [s.headers] }));
+
+    if (headerRanges.length > 0) {
+      const res = await fetch(`${baseUrl()}/values:batchUpdate`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ valueInputOption: 'USER_ENTERED', data: headerRanges }),
+      });
+      await handleResponse(res);
+    }
+
+    return missing.length;
+  }
+
   // Public API
   return {
     getRange,
@@ -181,5 +231,20 @@ const SheetsAPI = (() => {
     batchGet,
     valuesToObjects,
     findMonthRow,
+    initializeSpreadsheet,
   };
 })();
+
+async function handleSetup(btn) {
+  btn.disabled = true;
+  btn.textContent = 'מגדיר...';
+  try {
+    const count = await SheetsAPI.initializeSpreadsheet();
+    btn.textContent = count > 0 ? `✓ נוצרו ${count} גיליונות` : '✓ כבר מוגדר';
+    setTimeout(() => location.reload(), 1500);
+  } catch (err) {
+    btn.textContent = '⚙️ הגדרת גיליון';
+    btn.disabled = false;
+    alert('שגיאה: ' + err.message);
+  }
+}
