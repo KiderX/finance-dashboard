@@ -20,7 +20,7 @@ function generateHash(date, merchant, amount) {
 }
 
 // ── CSV parser ────────────────────────────────────────────
-function parseCSVLine(line) {
+function parseCSVLine(line, delimiter = ',') {
   const result = [];
   let cur = '', inQ = false;
   for (let i = 0; i < line.length; i++) {
@@ -28,7 +28,7 @@ function parseCSVLine(line) {
     if (ch === '"') {
       if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
       else inQ = !inQ;
-    } else if (ch === ',' && !inQ) {
+    } else if (ch === delimiter && !inQ) {
       result.push(cur); cur = '';
     } else {
       cur += ch;
@@ -39,13 +39,19 @@ function parseCSVLine(line) {
 }
 
 function parseCSV(text) {
-  const lines = text.split('\n').filter(l => l.trim());
+  // Strip BOM if present (Excel on Windows/Hebrew systems adds it)
+  const clean = text.replace(/^﻿/, '');
+  const lines = clean.split(/\r?\n/).filter(l => l.trim());
   if (lines.length < 2) throw new Error('הקובץ ריק או אינו תקין');
-  const headers = parseCSVLine(lines[0]).map(h => h.trim());
+
+  // Auto-detect delimiter: semicolons are common in Israeli Excel exports
+  const delim = lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
+
+  const headers = parseCSVLine(lines[0], delim).map(h => h.trim());
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
-    const vals = parseCSVLine(lines[i]);
-    if (vals.length < 3) continue;
+    const vals = parseCSVLine(lines[i], delim);
+    if (vals.length < 2) continue;
     const row = {};
     headers.forEach((h, idx) => { row[h] = (vals[idx] || '').trim(); });
     rows.push(row);
@@ -69,7 +75,9 @@ function setStep(n) {
 }
 
 function showError(msg) {
-  document.getElementById('upload-error').innerHTML = `<div class="error-msg">${msg}</div>`;
+  const el = document.getElementById('upload-error');
+  el.innerHTML = `<div class="error-msg">${msg}</div>`;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 // ── Step 1: File handling ─────────────────────────────────
@@ -100,7 +108,18 @@ function handleFile(file) {
   reader.onload = e => {
     try {
       const rows = parseCSV(e.target.result);
-      if (rows.length === 0) { showError('הקובץ אינו מכיל עסקאות'); return; }
+      if (rows.length === 0) {
+        showError('הקובץ אינו מכיל עסקאות. ודא שהרצת את normalizer.py וקובץ ה-CSV תקין.');
+        return;
+      }
+      // Warn if expected columns are missing
+      const expected = ['תאריך', 'שם בית עסק', 'סכום חיוב'];
+      const found = Object.keys(rows[0]);
+      const missing = expected.filter(c => !found.includes(c));
+      if (missing.length > 0) {
+        showError(`עמודות חסרות: ${missing.join(', ')}. עמודות שנמצאו: ${found.join(', ')}. ודא שהרצת את normalizer.py.`);
+        return;
+      }
       UploadState.rows = rows;
       renderPreview(rows);
       setStep(2);
