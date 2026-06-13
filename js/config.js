@@ -21,10 +21,10 @@ const CONFIG = {
   CLIENT_ID: '620598056888-3skoat2urtmpk57t37vb4i0tmrg3m6a9.apps.googleusercontent.com',
 
   /** OAuth scope for full read+write access */
-  SCOPES: 'https://www.googleapis.com/auth/spreadsheets email profile',
+  SCOPES: 'https://www.googleapis.com/auth/spreadsheets',
 
   /** OAuth scope for read-only access */
-  SCOPES_READONLY: 'https://www.googleapis.com/auth/spreadsheets.readonly email profile',
+  SCOPES_READONLY: 'https://www.googleapis.com/auth/spreadsheets.readonly',
 
   /** Google Sheets API v4 base URL */
   SHEETS_API_BASE: 'https://sheets.googleapis.com/v4/spreadsheets',

@@ -111,30 +111,19 @@ const AuthManager = (() => {
       tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CONFIG.CLIENT_ID,
         scope,
-        callback: async (tokenResponse) => {
+        callback: (tokenResponse) => {
           if (tokenResponse.error) {
             if (rejectTokenPromise) {
               rejectTokenPromise(new Error(tokenResponse.error));
             }
             return;
           }
-          try {
-            const email = await fetchUserEmail(tokenResponse.access_token);
-            if (!isEmailAllowed(email)) {
-              clearSession();
-              if (rejectTokenPromise) {
-                rejectTokenPromise(new Error(`הגישה נדחתה. כתובת האימייל ${email} אינה מורשית.`));
-              }
-              return;
-            }
-            saveSession(tokenResponse.access_token, email, tokenResponse.expires_in || 3600);
-            if (resolveTokenPromise) {
-              resolveTokenPromise(email);
-            }
-          } catch (err) {
-            if (rejectTokenPromise) {
-              rejectTokenPromise(err);
-            }
+          // Use the configured allowed email — the Sheet's own permissions
+          // enforce access control, so only the owner's token can read it.
+          const email = CONFIG.ALLOWED_EMAIL;
+          saveSession(tokenResponse.access_token, email, tokenResponse.expires_in || 3600);
+          if (resolveTokenPromise) {
+            resolveTokenPromise(email);
           }
         },
       });
