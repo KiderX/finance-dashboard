@@ -2,7 +2,7 @@
 
 const UploadState = {
   step: 1,
-  file: null,
+  fileNames: [],
   rows: [],
   duplicates: new Set(),
   existingHashes: new Set(),
@@ -17,6 +17,132 @@ function generateHash(date, merchant, amount) {
   const str = `${date}_${merchant}_${amount}`;
   try { return btoa(unescape(encodeURIComponent(str))); }
   catch (_) { return btoa(str); }
+}
+
+// ── Cal normalization ─────────────────────────────────────
+const CAL_CATEGORY_MAP = {
+  'אופנה':             'בגדים ואופנה',
+  'אנרגיה':            'רכב',
+  'ביטוח ופיננסים':    'ביטוח',
+  'חינוך':             'חינוך',
+  'מוסדות':            'הוצאות שטופות',
+  'מזון ומשקאות':      'מזון',
+  'מזון מהיר':         'מסעדות',
+  'מסעדות':            'מסעדות',
+  'משחקי מזל':         'פנאי ובילוי',
+  'פנאי בילוי':        'פנאי ובילוי',
+  'ריהוט ובית':        'בית',
+  'רכב ותחבורה':       'רכב',
+  'רפואה ובריאות':     'בריאות',
+  'שונות':             'שונות',
+  'תיירות':            'תיירות',
+  'תקשורת ומחשבים':    'תקשורת',
+};
+
+function parseCalDate(val) {
+  if (val instanceof Date) {
+    const d = val;
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  }
+  if (val === null || val === undefined || val === '') return '';
+  const n = Number(val);
+  // Excel serial (roughly 1900–2200 era)
+  if (!isNaN(n) && n > 40000 && n < 70000) {
+    const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+    return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`;
+  }
+  // D/M/YY or DD/MM/YYYY
+  const s = String(val).trim();
+  const match = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (match) {
+    let [, d, m, y] = match;
+    if (y.length === 2) y = '20' + y;
+    return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;
+  }
+  return s;
+}
+
+function parseCalAmount(val) {
+  if (val === null || val === undefined || val === '') return null;
+  if (typeof val === 'number') return val;
+  const s = String(val).replace(/[₪$,\s]/g, '');
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+// Scan first rows for a Cal header line (needs both date and amount columns)
+function findCalHeaderRow(rows) {
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const joined = rows[i].map(c => String(c)).join(' ');
+    if (joined.includes('תאריך') && (joined.includes('סכום') || joined.includes('ענף'))) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function isCalFormat(headers) {
+  return headers.some(h => h.includes('ענף') || h.includes('תאריך עסקה'));
+}
+
+// Transform a raw 2D Cal sheet into normalized row objects ready for preview/upload
+function normalizeCal2D(data2d, headerIdx, sourceName) {
+  const rawHeaders = data2d[headerIdx].map(h =>
+    String(h).replace(/^﻿/, '').replace(/\n/g, ' ').trim()
+  );
+
+  function colIdx(...candidates) {
+    for (const cand of candidates) {
+      const i = rawHeaders.findIndex(h => h.includes(cand));
+      if (i !== -1) return i;
+    }
+    return -1;
+  }
+
+  const dateIdx     = colIdx('תאריך עסקה', 'תאריך');
+  const merchantIdx = colIdx('שם בית עסק', 'בית עסק');
+  const amountIdx   = colIdx('סכום חיוב');
+  const typeIdx     = colIdx('סוג עסקה', 'סוג');
+  const branchIdx   = colIdx('ענף');
+  const notesIdx    = colIdx('הערות');
+
+  if (dateIdx === -1 || merchantIdx === -1 || amountIdx === -1) return [];
+
+  const rows = [];
+  for (let i = headerIdx + 1; i < data2d.length; i++) {
+    const row = data2d[i];
+    if (!row || row.every(c => c === '' || c === null || c === undefined)) continue;
+
+    const merchant = String(row[merchantIdx] || '').trim();
+    // Skip totals rows (empty merchant or a purely numeric value)
+    if (!merchant || !isNaN(parseFloat(merchant))) continue;
+
+    const amount = parseCalAmount(row[amountIdx]);
+    if (amount === null || amount === 0) continue;
+
+    const date = parseCalDate(row[dateIdx]);
+    if (!date) continue;
+
+    const branch   = String(branchIdx !== -1 ? (row[branchIdx] || '') : '').trim();
+    const category = CAL_CATEGORY_MAP[branch] || 'שונות';
+    const txnType  = String(typeIdx !== -1 ? (row[typeIdx] || '') : '').trim();
+    const notes    = String(notesIdx !== -1 ? (row[notesIdx] || '') : '').trim();
+    // "DD/MM/YYYY" → month = "MM/YYYY"
+    const month    = `${date.substring(3, 5)}/${date.substring(6)}`;
+
+    rows.push({
+      'תאריך':      date,
+      'שם בית עסק': merchant,
+      'סכום חיוב':  String(amount),
+      'קטגוריה':    category,
+      'סוג עסקה':   txnType,
+      'הערות':      notes,
+      'חודש':       month,
+      'מקור כרטיס': sourceName,
+      'פוצל':       'FALSE',
+    });
+  }
+  return rows;
 }
 
 // ── CSV parser ────────────────────────────────────────────
@@ -38,17 +164,34 @@ function parseCSVLine(line, delimiter = ',') {
   return result;
 }
 
+// Split text into logical CSV lines, keeping \n inside quoted fields intact
+function splitIntoLogicalLines(text) {
+  const lines = [];
+  let current = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') { inQ = !inQ; current += ch; }
+    else if (ch === '\r') { /* skip */ }
+    else if (ch === '\n' && !inQ) {
+      if (current.trim()) lines.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) lines.push(current);
+  return lines;
+}
+
 function parseCSV(text) {
-  // Strip BOM — pandas utf-8-sig adds ﻿ at start of file
   const clean = text.replace(/^﻿/, '');
-  const lines = clean.split(/\r?\n/).filter(l => l.trim());
+  const lines = splitIntoLogicalLines(clean);
   if (lines.length < 2) throw new Error('הקובץ ריק או אינו תקין');
 
-  // Auto-detect delimiter: semicolons are common in Israeli/European Excel exports
   const delim = lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
-
-  // Strip BOM again from first header in case it survived (belt-and-suspenders)
-  const headers = parseCSVLine(lines[0], delim).map(h => h.replace(/^﻿/, '').trim());
+  const headers = parseCSVLine(lines[0], delim).map(h =>
+    h.replace(/^﻿/, '').replace(/\n/g, ' ').trim()
+  );
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
     const vals = parseCSVLine(lines[i], delim);
@@ -60,8 +203,7 @@ function parseCSV(text) {
   return rows;
 }
 
-// Flexible column lookup — matches exact name, partial containment, or BOM-prefixed variant.
-// Accepts multiple candidate names in priority order (e.g. normalizer name first, raw Cal name second).
+// Flexible column lookup — matches exact name or partial containment
 function getCol(row, ...candidates) {
   const keys = Object.keys(row);
   for (const cand of candidates) {
@@ -73,6 +215,58 @@ function getCol(row, ...candidates) {
     if (match && row[match] !== '') return row[match];
   }
   return '';
+}
+
+// ── File processors ───────────────────────────────────────
+async function processExcelFile(file) {
+  if (typeof XLSX === 'undefined') {
+    throw new Error('ספריית Excel לא טעונה — נסה לרענן את הדף.');
+  }
+  const buffer = await file.arrayBuffer();
+  const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
+
+  const allRows = [];
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true });
+    const strData = data.map(r => r.map(c => String(c === null || c === undefined ? '' : c)));
+    const headerIdx = findCalHeaderRow(strData);
+    if (headerIdx === -1) continue;
+
+    const rows = normalizeCal2D(data, headerIdx, sheetName);
+    allRows.push(...rows);
+  }
+  return allRows;
+}
+
+async function processCsvFile(file) {
+  const text = await file.text();
+  const clean = text.replace(/^﻿/, '');
+  const lines = splitIntoLogicalLines(clean);
+  if (lines.length < 2) return [];
+
+  const delim = lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
+  const data2d = lines.map(l => parseCSVLine(l, delim).map(v => v.trim()));
+  const strData = data2d.map(r => r.map(c => String(c)));
+
+  const headerIdx = findCalHeaderRow(strData);
+  if (headerIdx !== -1) {
+    const headers = strData[headerIdx].map(h => h.replace(/\n/g, ' ').trim());
+    if (isCalFormat(headers)) {
+      return normalizeCal2D(data2d, headerIdx, file.name);
+    }
+  }
+
+  // Already-normalized CSV (e.g. output from normalizer.py)
+  const rows = parseCSV(text);
+  return rows;
+}
+
+async function processOneFile(file) {
+  const ext = file.name.toLowerCase().split('.').pop();
+  if (ext === 'xlsx' || ext === 'xls') return processExcelFile(file);
+  if (ext === 'csv') return processCsvFile(file);
+  throw new Error(`סוג קובץ לא נתמך: .${ext}`);
 }
 
 // ── Step management ───────────────────────────────────────
@@ -92,7 +286,7 @@ function setStep(n) {
 
 function showError(msg) {
   const el = document.getElementById('upload-error');
-  el.innerHTML = `<div class="error-msg">${msg}</div>`;
+  el.innerHTML = `<div class="error-msg">${escHtml(msg)}</div>`;
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
@@ -102,58 +296,74 @@ function initUploadZone() {
   const input = document.getElementById('file-input');
 
   zone.addEventListener('click', () => input.click());
-
   zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
   zone.addEventListener('drop', e => {
     e.preventDefault();
     zone.classList.remove('dragover');
-    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
   });
-
-  input.addEventListener('change', () => { if (input.files[0]) handleFile(input.files[0]); });
+  input.addEventListener('change', () => {
+    if (input.files.length > 0) handleFiles(input.files);
+  });
 }
 
-function handleFile(file) {
-  if (!file.name.toLowerCase().endsWith('.csv')) {
-    showError('יש להעלות קובץ CSV בלבד. הרץ תחילה את normalizer.py על קובץ ה-Excel.');
+async function handleFiles(fileList) {
+  const files = Array.from(fileList);
+  const zone  = document.getElementById('upload-zone');
+  zone.querySelector('.upload-zone-text').textContent = 'מעבד קבצים...';
+
+  document.getElementById('upload-error').innerHTML = '';
+
+  const allRows   = [];
+  const errors    = [];
+  const warnings  = [];
+  const names     = [];
+
+  for (const file of files) {
+    try {
+      const rows = await processOneFile(file);
+      if (rows.length > 0) {
+        allRows.push(...rows);
+        names.push(file.name);
+      } else {
+        warnings.push(`${file.name}: לא נמצאו עסקאות`);
+      }
+    } catch (err) {
+      errors.push(`${file.name}: ${err.message}`);
+    }
+  }
+
+  // Reset drop zone text
+  zone.querySelector('.upload-zone-text').textContent =
+    'גרור לכאן קבצי Excel / CSV של Cal';
+
+  if (allRows.length === 0) {
+    showError(
+      (errors.length > 0 ? errors.join('\n') : '') +
+      (warnings.length > 0 ? '\n' + warnings.join('\n') : '') ||
+      'לא נמצאו עסקאות בקבצים שנבחרו'
+    );
     return;
   }
-  UploadState.file = file;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const rows = parseCSV(e.target.result);
-      if (rows.length === 0) {
-        showError('הקובץ אינו מכיל עסקאות. ודא שהרצת את normalizer.py וקובץ ה-CSV תקין.');
-        return;
-      }
-      // Check we can find at least a date or merchant column
-      const sample = rows[0];
-      const hasDate     = !!getCol(sample, 'תאריך', 'תאריך עסקה');
-      const hasMerchant = !!getCol(sample, 'שם בית עסק', 'בית עסק');
-      const hasAmount   = !!getCol(sample, 'סכום חיוב', 'סכום עסקה', 'סכום');
-      if (!hasDate && !hasMerchant && !hasAmount) {
-        const found = Object.keys(sample).join(', ');
-        showError(`לא ניתן לזהות עמודות עסקאות. עמודות שנמצאו: ${found}. ודא שהרצת את normalizer.py.`);
-        return;
-      }
-      UploadState.rows = rows;
-      renderPreview(rows);
-      setStep(2);
-    } catch (err) {
-      showError(err.message);
-    }
-  };
-  reader.onerror = () => showError('שגיאה בקריאת הקובץ');
-  reader.readAsText(file, 'utf-8');
+
+  if (warnings.length > 0 || errors.length > 0) {
+    const msgs = [...warnings, ...errors].join(' | ');
+    const el = document.getElementById('upload-error');
+    el.innerHTML = `<div class="error-msg" style="background:rgba(243,156,18,0.15);border-color:var(--accent);">${escHtml(msgs)}</div>`;
+  }
+
+  UploadState.rows      = allRows;
+  UploadState.fileNames = names;
+  renderPreview(allRows);
+  setStep(2);
 }
 
 // ── Step 2: Preview table ─────────────────────────────────
 function renderPreview(rows) {
   const tbody = document.getElementById('preview-tbody');
-  tbody.innerHTML = '';
   document.getElementById('preview-count').textContent = `${rows.length} עסקאות`;
+  tbody.innerHTML = '';
 
   rows.forEach((row, idx) => {
     const date     = getCol(row, 'תאריך', 'תאריך עסקה');
@@ -163,11 +373,12 @@ function renderPreview(rows) {
     const category = getCol(row, 'קטגוריה') || '';
     const txnType  = getCol(row, 'סוג עסקה', 'סוג');
     const notes    = getCol(row, 'הערות');
-    const tr  = document.createElement('tr');
+    const source   = getCol(row, 'מקור כרטיס');
+    const tr = document.createElement('tr');
     tr.dataset.idx = idx;
     tr.innerHTML = `
       <td>${escHtml(date)}</td>
-      <td>${escHtml(merchant)}</td>
+      <td>${escHtml(merchant)}${source ? `<br><small class="text-muted" style="font-size:0.7rem;">${escHtml(source)}</small>` : ''}</td>
       <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>
       <td>
         <select class="input-inline cat-select" data-idx="${idx}">
@@ -249,9 +460,9 @@ function initMonthSelect() {
 
 // ── Step 5: Upload ────────────────────────────────────────
 async function doUpload() {
-  const btn     = document.getElementById('upload-btn');
-  const msgDiv  = document.getElementById('upload-result');
-  btn.disabled  = true; btn.textContent = 'מעלה...';
+  const btn    = document.getElementById('upload-btn');
+  const msgDiv = document.getElementById('upload-result');
+  btn.disabled = true; btn.textContent = 'מעלה...';
   msgDiv.innerHTML = '';
 
   try {
@@ -280,9 +491,10 @@ async function doUpload() {
 
     // Audit log
     const totalAmt = toUpload.reduce((s, r) => s + parseFloat(r[2] || 0), 0);
+    const fileLabel = UploadState.fileNames.join(', ') || 'העלאה ידנית';
     await SheetsAPI.appendRows(CONFIG.SHEETS.AUDIT_LOG, [[
       new Date().toLocaleString('he-IL'),
-      UploadState.file?.name || 'CSV',
+      fileLabel,
       toUpload.length,
       totalAmt,
       AuthManager.getUserEmail(),
@@ -295,7 +507,7 @@ async function doUpload() {
 
     setStep(5);
   } catch (err) {
-    msgDiv.innerHTML = `<div class="error-msg">${err.message}</div>`;
+    msgDiv.innerHTML = `<div class="error-msg">${escHtml(err.message)}</div>`;
   } finally {
     btn.disabled = false; btn.textContent = 'העלה לגוגל שיטס ▶';
   }

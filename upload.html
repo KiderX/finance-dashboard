@@ -50,13 +50,10 @@
       <div class="card">
         <div class="upload-zone" id="upload-zone">
           <div class="upload-zone-icon">📂</div>
-          <div class="upload-zone-text">גרור לכאן קובץ CSV</div>
-          <div class="upload-zone-hint">או לחץ לבחירת קובץ</div>
+          <div class="upload-zone-text">גרור לכאן קבצי Excel / CSV של Cal</div>
+          <div class="upload-zone-hint">או לחץ לבחירת קבצים — ניתן לבחור מספר קבצים בבת אחת (.xlsx / .csv)</div>
         </div>
-        <input type="file" id="file-input" accept=".csv" style="display:none;" />
-        <p class="text-muted mt-16" style="font-size:0.85rem;">
-          יש להריץ תחילה את <code>normalizer.py</code> על קובץ ה-Excel של Cal כדי לקבל CSV תקני.
-        </p>
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" multiple style="display:none;" />
       </div>
     </div>
 
@@ -135,6 +132,7 @@
 </div>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/sheets.js"></script>
