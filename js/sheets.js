@@ -62,7 +62,7 @@ const SheetsAPI = (() => {
    * @returns {string} URL-encoded sheet name.
    */
   function encodeSheetName(sheetName) {
-    return encodeURIComponent(`'${sheetName}'`);
+    return encodeURIComponent(sheetName);
   }
 
   /**

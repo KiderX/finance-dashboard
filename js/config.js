@@ -31,14 +31,14 @@ const CONFIG = {
 
   /** Sheet tab names (must match exactly what is in the Google Sheet) */
   SHEETS: {
-    TRANSACTIONS: 'עסקאות',
-    INCOME: 'הכנסות',
-    MONTHLY_SUMMARY: 'סיכום חודשי',
-    PROFIT_ALLOCATION: 'פיזור רווחים',
-    NET_WORTH: 'מעקב עושר',
+    TRANSACTIONS: 'Transactions',
+    INCOME: 'Income',
+    MONTHLY_SUMMARY: 'MonthlySummary',
+    PROFIT_ALLOCATION: 'Allocation',
+    NET_WORTH: 'NetWorth',
     ESPP: 'ESPP',
-    AUDIT_LOG: 'לוג העלאות',
-    DASHBOARD: 'דשבורד',
+    AUDIT_LOG: 'AuditLog',
+    DASHBOARD: 'Dashboard',
   },
 
   /** Expense categories (order matters — matches UI display order) */
