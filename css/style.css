@@ -103,6 +103,11 @@ tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: rgba(255,255,255,0.04); }
 tbody td { padding: 10px 14px; text-align: right; vertical-align: middle; }
 .amount-positive { color: var(--secondary); font-weight: 600; }
+.income-input { background: transparent; border: none; border-bottom: 1px dashed var(--border); color: var(--secondary); font-weight: 600; font-family: 'Heebo', sans-serif; font-size: 0.9rem; text-align: right; width: 100%; padding: 2px 0; outline: none; direction: ltr; }
+.income-input:focus { border-bottom-color: var(--secondary); }
+.income-display-val { display: none; }
+body.readonly .income-display-val { display: inline; }
+body.readonly .income-input { display: none; }
 .amount-negative { color: var(--danger); font-weight: 600; }
 .total-row td { font-weight: 700; background: rgba(26,82,118,0.2); border-top: 2px solid var(--border); }
 .category-group-header td { font-weight: 700; background: rgba(26,82,118,0.12); padding-top: 14px; border-top: 1px solid var(--border); }

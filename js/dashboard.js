@@ -57,9 +57,9 @@ function renderIncome(incomeRow) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${label}</td>
-      <td class="amount-positive">${formatShekel(value)}</td>
-      <td class="write-only">
-        <input type="number" class="input-inline income-input" data-col="${idx + 1}" value="${value || ''}" placeholder="0" />
+      <td>
+        <span class="amount-positive income-display-val">${formatShekel(value)}</span>
+        <input type="number" class="income-input write-only" data-col="${idx + 1}" value="${value || ''}" placeholder="0" />
       </td>`;
     tbody.appendChild(tr);
   });

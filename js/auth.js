@@ -163,6 +163,7 @@ const AuthManager = (() => {
 
     // Apply read-only mode UI restrictions
     if (isReadOnly()) {
+      document.body.classList.add('readonly');
       document.querySelectorAll('.write-only').forEach((el) => {
         el.style.display = 'none';
       });
