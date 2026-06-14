@@ -66,25 +66,43 @@
         </div>
       </div>
 
-      <!-- Hero chart: Income vs Expenses -->
+      <!-- Hero chart: Income vs Expenses — full width, hero height -->
       <div class="card">
-        <div class="card-title">הכנסות מול הוצאות — <span id="yearly-chart-year" style="color:var(--violet-lite);"></span></div>
-        <div class="chart-container-lg"><canvas id="yearly-income-expense-chart"></canvas></div>
+        <div class="card-title" style="display:flex;align-items:center;gap:10px;">
+          <span>הכנסות מול הוצאות</span>
+          <span style="color:var(--violet-lite);font-size:0.75rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;" id="yearly-chart-year"></span>
+        </div>
+        <div class="chart-glow-wrap chart-container-hero">
+          <canvas id="yearly-income-expense-chart"></canvas>
+        </div>
       </div>
 
-      <!-- 2-col charts -->
-      <div class="dashboard-grid">
+      <!-- 3-col bento: savings rate (wide) + donut + ESPP mini -->
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;">
         <div class="card">
           <div class="card-title">אחוז חיסכון לאורך זמן</div>
-          <div class="chart-container-lg"><canvas id="savings-rate-chart"></canvas></div>
+          <div class="chart-glow-wrap chart-container-md">
+            <canvas id="savings-rate-chart"></canvas>
+          </div>
         </div>
+
         <div class="card">
-          <div class="card-title">פיזור כספים שנתי</div>
-          <div class="chart-container"><canvas id="allocation-donut-chart"></canvas></div>
+          <div class="card-title">פיזור כספים</div>
+          <div class="chart-glow-wrap chart-container-md">
+            <canvas id="allocation-donut-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">ESPP שנתי</div>
+          <div id="espp-summary" style="margin-bottom:12px;"><p class="text-muted" style="font-size:0.82rem;">טוען...</p></div>
+          <div class="chart-glow-wrap chart-container-sm">
+            <canvas id="espp-yearly-chart"></canvas>
+          </div>
         </div>
       </div>
 
-      <!-- 2-col: Monthly table + ESPP -->
+      <!-- 2-col: Monthly summary table + YoY -->
       <div class="dashboard-grid">
         <div class="card">
           <div class="card-title">סיכום חודשי</div>
@@ -102,36 +120,29 @@
         </div>
 
         <div class="card">
-          <div class="card-title">סיכום ESPP שנתי</div>
-          <div id="espp-summary"><p class="text-muted">טוען...</p></div>
-          <div class="chart-container mt-16"><canvas id="espp-yearly-chart"></canvas></div>
+          <div class="card-title">השוואה שנה על שנה</div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>חודש</th>
+                  <th id="yoy-income-cur">הכנסות</th>
+                  <th id="yoy-expense-cur">הוצאות</th>
+                  <th id="yoy-income-prev">הכנסות קודמת</th>
+                  <th id="yoy-expense-prev">הוצאות קודמת</th>
+                  <th>△ הכנסות</th>
+                  <th>△ הוצאות</th>
+                </tr>
+              </thead>
+              <tbody id="yoy-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <!-- YoY comparison -->
+      <!-- Recurring transactions — compact -->
       <div class="card">
-        <div class="card-title">השוואה שנה על שנה</div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>חודש</th>
-                <th id="yoy-income-cur">הכנסות</th>
-                <th id="yoy-expense-cur">הוצאות</th>
-                <th id="yoy-income-prev">הכנסות (שנה קודמת)</th>
-                <th id="yoy-expense-prev">הוצאות (שנה קודמת)</th>
-                <th>שינוי הכנסות</th>
-                <th>שינוי הוצאות</th>
-              </tr>
-            </thead>
-            <tbody id="yoy-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Recurring transactions -->
-      <div class="card">
-        <div class="card-title">הוראות קבע (חוזרות 3+ חודשים)</div>
+        <div class="card-title">הוראות קבע <span class="text-muted" style="font-size:0.72rem;font-weight:500;">(חוזרות 3+ חודשים)</span></div>
         <div class="table-wrapper">
           <table>
             <thead><tr><th>שם בית עסק</th><th>חודשים</th><th>ממוצע חודשי</th></tr></thead>
@@ -145,10 +156,10 @@
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-<script src="js/config.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/sheets.js"></script>
-<script src="js/charts.js"></script>
-<script src="js/yearly.js"></script>
+<script src="js/config.js?v=4"></script>
+<script src="js/auth.js?v=4"></script>
+<script src="js/sheets.js?v=4"></script>
+<script src="js/charts.js?v=4"></script>
+<script src="js/yearly.js?v=4"></script>
 </body>
 </html>

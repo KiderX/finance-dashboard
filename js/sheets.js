@@ -285,6 +285,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedTheme = localStorage.getItem('theme');
   if (savedTheme === 'light') document.documentElement.setAttribute('data-theme', 'light');
 
+  // Inject sidebar collapse button (desktop hamburger)
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    const colBtn = document.createElement('button');
+    colBtn.id        = 'sidebar-collapse-btn';
+    colBtn.className = 'sidebar-collapse-btn';
+    colBtn.setAttribute('aria-label', 'כווץ/הרחב סרגל צד');
+
+    const sidebarIsCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (sidebarIsCollapsed) {
+      document.body.classList.add('sidebar-collapsed-mode');
+      colBtn.textContent = '›';  // RTL: › = "open/expand"
+    } else {
+      colBtn.textContent = '‹';  // RTL: ‹ = "collapse"
+    }
+
+    const logoEl = sidebar.querySelector('.sidebar-logo');
+    if (logoEl) logoEl.appendChild(colBtn);
+
+    colBtn.addEventListener('click', () => {
+      const nowCollapsed = !document.body.classList.contains('sidebar-collapsed-mode');
+      document.body.classList.toggle('sidebar-collapsed-mode', nowCollapsed);
+      colBtn.textContent = nowCollapsed ? '›' : '‹';
+      localStorage.setItem('sidebarCollapsed', nowCollapsed);
+    });
+  }
+
   // Inject theme toggle button next to settings gear
   const settingsBtn = document.getElementById('settings-btn');
   if (settingsBtn) {

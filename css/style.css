@@ -1224,3 +1224,188 @@ select option { background: #0A1020; color: var(--text); }
   .yearly-stats-grid { grid-template-columns: repeat(2, 1fr); }
   .month-picker-popup { min-width: 220px; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR COLLAPSE  (desktop hamburger)
+   ═══════════════════════════════════════════════════════════ */
+.sidebar {
+  /* Override to include width/padding in transition */
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              width   0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              padding 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+.main-content {
+  transition: margin-right 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-collapse-btn {
+  margin-right: auto;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s;
+  flex-shrink: 0;
+  font-family: 'Heebo', sans-serif;
+}
+.sidebar-collapse-btn:hover {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.35);
+  color: var(--violet-lite);
+}
+[data-theme="light"] .sidebar-collapse-btn { border-color: rgba(0,0,0,0.12); }
+
+/* Collapsed state — override --nav-width via body class */
+body.sidebar-collapsed-mode { --nav-width: 64px; }
+
+body.sidebar-collapsed-mode .sidebar-logo {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+  gap: 0;
+}
+body.sidebar-collapsed-mode .sidebar-logo span { display: none; }
+body.sidebar-collapsed-mode .sidebar-logo .sidebar-collapse-btn { margin: 0; }
+
+body.sidebar-collapsed-mode .sidebar-nav { padding: 8px 6px; }
+
+body.sidebar-collapsed-mode .nav-item {
+  font-size: 0;
+  justify-content: center;
+  padding: 11px 0;
+  overflow: hidden;
+  gap: 0;
+  border-radius: 10px;
+}
+body.sidebar-collapsed-mode .nav-icon { font-size: 1.1rem; flex-shrink: 0; }
+body.sidebar-collapsed-mode .nav-item.active::after { display: none; }
+
+body.sidebar-collapsed-mode .sidebar-footer { padding: 10px 6px; }
+body.sidebar-collapsed-mode .user-info { display: none !important; }
+body.sidebar-collapsed-mode .sidebar-footer > .d-flex {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+body.sidebar-collapsed-mode .sidebar-footer .btn {
+  flex: none !important;
+  width: 34px;
+  height: 34px;
+  padding: 0 !important;
+  font-size: 0 !important;
+  min-width: 0 !important;
+}
+body.sidebar-collapsed-mode .sidebar-footer .theme-toggle-btn,
+body.sidebar-collapsed-mode .sidebar-footer #settings-btn {
+  font-size: 0.9rem !important;
+}
+/* Hide logout text button when collapsed */
+body.sidebar-collapsed-mode .sidebar-footer .btn:not(#settings-btn):not(#theme-toggle-btn) {
+  display: none;
+}
+
+@media (max-width: 768px) { .sidebar-collapse-btn { display: none; } }
+
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD — Premium Visual Improvements
+   ═══════════════════════════════════════════════════════════ */
+
+/* Tinted stat cards — one accent colour per metric */
+.stats-grid .card:has(#stat-income) {
+  border-top: 2px solid rgba(16, 185, 129, 0.22);
+  background: rgba(16, 185, 129, 0.04) !important;
+}
+.stats-grid .card:has(#stat-income)::before {
+  background: linear-gradient(135deg,
+    rgba(16,185,129,0.18) 0%, transparent 55%) !important;
+}
+.stats-grid .card:has(#stat-expenses) {
+  border-top: 2px solid rgba(244, 63, 94, 0.22);
+  background: rgba(244, 63, 94, 0.04) !important;
+}
+.stats-grid .card:has(#stat-expenses)::before {
+  background: linear-gradient(135deg,
+    rgba(244,63,94,0.18) 0%, transparent 55%) !important;
+}
+.stats-grid .card:has(#stat-profit) {
+  border-top: 2px solid rgba(139, 92, 246, 0.28);
+}
+.stats-grid .card:has(#stat-savings-rate) {
+  border-top: 2px solid rgba(245, 158, 11, 0.22);
+}
+
+/* Full-width chart card inside the dashboard grid */
+.dashboard-grid .card:has(#income-expense-chart) {
+  grid-column: 1 / -1;
+}
+
+/* Slightly larger chart when full-width */
+.card:has(#income-expense-chart) .chart-container {
+  height: 240px;
+}
+
+/* Page header – frosted pill for the title */
+.page-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+/* Better category group header visual */
+.category-group-header.cat-expanded td {
+  color: #fff;
+  background: rgba(139, 92, 246, 0.06) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   YEARLY CHARTS — compact + futuristic sizing
+   ═══════════════════════════════════════════════════════════ */
+.chart-container-hero { position: relative; height: 260px; }
+.chart-container-md   { position: relative; height: 220px; }
+.chart-container-sm   { position: relative; height: 180px; }
+
+/* Subtle chart glow wrapper */
+.chart-glow-wrap {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(139, 92, 246, 0.025);
+}
+.chart-glow-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(139, 92, 246, 0.1);
+  pointer-events: none;
+}
+
+/* Yearly KPI strip — smaller values on yearly page */
+.yearly-stats-grid .card-value { font-size: 1.7rem; }
+
+/* ─── Light mode adjustments ─────────────────────────────── */
+[data-theme="light"] .stats-grid .card:has(#stat-income) {
+  background: rgba(16, 185, 129, 0.05) !important;
+}
+[data-theme="light"] .stats-grid .card:has(#stat-expenses) {
+  background: rgba(244, 63, 94, 0.04) !important;
+}
+[data-theme="light"] .category-group-header.cat-expanded td {
+  background: rgba(139, 92, 246, 0.05) !important;
+  color: var(--violet);
+}
+
+@media (max-width: 768px) {
+  .card:has(#income-expense-chart) .chart-container { height: 200px; }
+  .chart-container-hero { height: 200px; }
+  .chart-container-md   { height: 160px; }
+  .chart-container-sm   { height: 140px; }
+}
