@@ -559,20 +559,20 @@ tbody td { padding: 11px 14px; text-align: right; vertical-align: middle; }
 .btn-success {
   background: linear-gradient(135deg, #34D399 0%, var(--income) 100%);
   color: #fff;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.32);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.14);
 }
 .btn-success:hover {
-  box-shadow: 0 4px 26px rgba(16, 185, 129, 0.52);
+  box-shadow: 0 4px 18px rgba(16, 185, 129, 0.30);
   transform: translateY(-1px);
 }
 
 .btn-danger {
   background: linear-gradient(135deg, #FB7185 0%, var(--expense) 100%);
   color: #fff;
-  box-shadow: 0 4px 16px rgba(244, 63, 94, 0.28);
+  box-shadow: 0 4px 10px rgba(244, 63, 94, 0.12);
 }
 .btn-danger:hover {
-  box-shadow: 0 4px 24px rgba(244, 63, 94, 0.48);
+  box-shadow: 0 4px 18px rgba(244, 63, 94, 0.26);
   transform: translateY(-1px);
 }
 
@@ -735,7 +735,7 @@ select option { background: #0A1020; color: var(--text); }
   letter-spacing: 0.3px;
 }
 
-.badge-info    { background: rgba(245,158,11,0.12);  color: #FCD34D;         border: 1px solid rgba(245,158,11,0.22); }
+.badge-info    { background: rgba(245,158,11,0.10);  color: #F1F5F9;         border: 1px solid rgba(245,158,11,0.20); }
 .badge-success { background: rgba(16,185,129,0.12);  color: var(--income);   border: 1px solid rgba(16,185,129,0.22); }
 .badge-danger  { background: rgba(244,63,94,0.12);   color: var(--expense);  border: 1px solid rgba(244,63,94,0.22); }
 .badge-warning { background: rgba(245,158,11,0.12);  color: var(--gold);     border: 1px solid rgba(245,158,11,0.22); }

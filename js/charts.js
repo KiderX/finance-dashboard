@@ -419,28 +419,22 @@ function renderNetWorthLine(canvasId, months, values) {
   };
 
   return new Chart(canvas, {
-    type: 'line',
+    type: 'bar',
     data: {
       labels: months,
-      datasets: [
-        {
-          label: 'שווי נקי כולל',
-          data: values,
-          borderColor: CHART_COLORS.income,
-          backgroundColor: (context) => {
-            const { chartArea } = context.chart;
-            if (!chartArea) return 'rgba(16,185,129,0.15)';
-            return makeAreaGradient(ctx, chartArea, '#10B981');
-          },
-          pointBackgroundColor: CHART_COLORS.income,
-          pointBorderColor: '#050B18',
-          pointBorderWidth: 2,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          tension: 0.4,
-          fill: true,
+      datasets: [{
+        label: 'שווי נקי כולל',
+        data: values,
+        backgroundColor: (context) => {
+          const { chartArea } = context.chart;
+          if (!chartArea) return 'rgba(16,185,129,0.75)';
+          return makeGradient(ctx, chartArea, '#10B981', 0.88, 0.48);
         },
-      ],
+        borderRadius: 10,
+        borderSkipped: false,
+        barPercentage: 0.65,
+        categoryPercentage: 0.8,
+      }],
     },
     options: opts,
   });
@@ -506,30 +500,33 @@ function renderNetWorthStackedArea(canvasId, months, portfolio, cashFund, saving
   };
 
   return new Chart(canvas, {
-    type: 'line',
+    type: 'bar',
     data: {
       labels: months,
       datasets: [
         {
           label: 'תיק השקעות',
           data: portfolio,
-          backgroundColor: 'rgba(14, 165, 233, 0.45)',
-          borderColor: '#0EA5E9',
-          fill: true, tension: 0.4, pointRadius: 3,
+          backgroundColor: 'rgba(14, 165, 233, 0.80)',
+          borderRadius: 0,
+          borderSkipped: false,
+          stack: 'nw',
         },
         {
           label: 'קרן כספית',
           data: cashFund,
-          backgroundColor: 'rgba(16, 185, 129, 0.45)',
-          borderColor: CHART_COLORS.income,
-          fill: true, tension: 0.4, pointRadius: 3,
+          backgroundColor: 'rgba(16, 185, 129, 0.80)',
+          borderRadius: 0,
+          borderSkipped: false,
+          stack: 'nw',
         },
         {
           label: 'חסכונות',
           data: savings,
-          backgroundColor: 'rgba(139, 92, 246, 0.45)',
-          borderColor: CHART_COLORS.violet,
-          fill: true, tension: 0.4, pointRadius: 3,
+          backgroundColor: 'rgba(139, 92, 246, 0.80)',
+          borderRadius: { topLeft: 8, topRight: 8 },
+          borderSkipped: false,
+          stack: 'nw',
         },
       ],
     },

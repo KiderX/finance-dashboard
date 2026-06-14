@@ -134,11 +134,26 @@ function detectRecurring(txData, year) {
 
 // ── ESPP yearly summary ───────────────────────────────────
 function renderESPPSummary(esppData, year) {
-  const container = document.getElementById('espp-summary');
+  const container  = document.getElementById('espp-summary');
+  const chartWrap  = document.getElementById('espp-yearly-chart-wrap');
+  const legendRow  = document.getElementById('espp-yearly-legend');
   if (!container) return;
 
+  function showEmpty(msg) {
+    if (legendRow) legendRow.style.display = 'none';
+    if (chartWrap) chartWrap.style.display = 'none';
+    container.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:140px;margin-bottom:0;';
+    container.innerHTML = `<p class="text-muted" style="font-size:0.88rem;text-align:center;">${msg}</p>`;
+  }
+
+  function restoreLayout() {
+    if (legendRow) legendRow.style.display = '';
+    if (chartWrap) chartWrap.style.display = '';
+    container.style.cssText = 'margin-bottom:12px;';
+  }
+
   if (!esppData || esppData.length < 2) {
-    container.innerHTML = '<p class="text-muted">אין נתוני ESPP</p>';
+    showEmpty('אין נתוני ESPP');
     return;
   }
 
@@ -148,9 +163,11 @@ function renderESPPSummary(esppData, year) {
   });
 
   if (rows.length === 0) {
-    container.innerHTML = `<p class="text-muted">אין מכירות ESPP ב-${year}</p>`;
+    showEmpty(`אין מכירות ESPP ב-${year}`);
     return;
   }
+
+  restoreLayout();
 
   const totalNet = rows.reduce((s, r) => s + parseFloat(r[5] || 0), 0);
   const totalTax = rows.reduce((s, r) => s + parseFloat(r[4] || 0), 0);
