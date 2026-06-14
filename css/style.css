@@ -467,30 +467,27 @@ tbody td { padding: 11px 14px; text-align: right; vertical-align: middle; }
 
 /* ── Category hierarchy ──────────────────────────────────── */
 
-/* Group header: uppercase with gold gradient-line divider above */
+/* Group header: styled like income rows but with subtle top separator */
 .category-group-header td {
-  font-weight: 800;
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--gold-lite);
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--text);
   background: transparent !important;
-  padding-top: 22px;
-  padding-bottom: 8px;
+  padding: 11px 14px;
   position: relative;
 }
 
 .category-group-header td:first-child::before {
   content: '';
   position: absolute;
-  top: 11px;
+  top: 0;
   right: 14px;
   left: 14px;
   height: 1px;
   background: linear-gradient(
     90deg,
-    rgba(245, 158, 11, 0.7) 0%,
-    rgba(245, 158, 11, 0.15) 60%,
+    rgba(245, 158, 11, 0.25) 0%,
+    rgba(245, 158, 11, 0.05) 60%,
     transparent 100%
   );
 }
@@ -1285,7 +1282,7 @@ select option { background: #0A1020; color: var(--text); }
 
 [data-theme="light"] .category-group-header td {
   background: transparent !important;
-  color: var(--gold-dark);
+  color: var(--text);
 }
 [data-theme="light"] .category-group-header td::before { opacity: 0.35; }
 [data-theme="light"] .category-subgroup-header td { background: rgba(245,158,11,0.03) !important; }
