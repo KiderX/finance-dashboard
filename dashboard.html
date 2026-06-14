@@ -96,17 +96,23 @@
         <div class="card write-only">
           <div class="d-flex justify-between align-center mb-16">
             <div class="card-title mb-0">פיזור רווחים</div>
-            <button class="btn btn-sm btn-success" id="save-allocation-btn">שמור</button>
+            <div class="d-flex gap-8 align-center" id="allocation-actions">
+              <button class="btn btn-sm btn-outline" id="edit-allocation-btn">✏️ עריכה</button>
+              <span id="allocation-edit-mode-btns" style="display:none;" class="d-flex gap-8">
+                <button class="btn btn-sm btn-outline" id="cancel-allocation-btn">ביטול</button>
+                <button class="btn btn-sm btn-success" id="save-allocation-btn">שמור ✓</button>
+              </span>
+            </div>
           </div>
           <p class="text-muted mb-16" style="font-size:0.85rem;">רווח לחלוקה: <strong class="text-accent" id="profit-to-allocate">₪0</strong></p>
           <div class="table-wrapper">
             <table>
               <thead><tr><th>יעד</th><th>סכום (₪)</th></tr></thead>
-              <tbody>
-                <tr><td>עו"ש</td><td><input type="number" class="input-inline allocation-input" placeholder="0" /></td></tr>
-                <tr><td>קרן כספית</td><td><input type="number" class="input-inline allocation-input" placeholder="0" /></td></tr>
-                <tr><td>השקעות</td><td><input type="number" class="input-inline allocation-input" placeholder="0" /></td></tr>
-                <tr><td>אחר</td><td><input type="number" class="input-inline allocation-input" placeholder="0" /></td></tr>
+              <tbody id="allocation-tbody">
+                <tr><td>עו"ש</td><td><span class="allocation-display-val"></span><input type="number" class="allocation-input" placeholder="0" /></td></tr>
+                <tr><td>קרן כספית</td><td><span class="allocation-display-val"></span><input type="number" class="allocation-input" placeholder="0" /></td></tr>
+                <tr><td>השקעות</td><td><span class="allocation-display-val"></span><input type="number" class="allocation-input" placeholder="0" /></td></tr>
+                <tr><td>אחר</td><td><span class="allocation-display-val"></span><input type="number" class="allocation-input" placeholder="0" /></td></tr>
               </tbody>
               <tfoot><tr class="total-row"><td>סה"כ מוקצה</td><td id="allocation-total-cell">₪0</td></tr></tfoot>
             </table>

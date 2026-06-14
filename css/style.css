@@ -103,11 +103,18 @@ tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: rgba(255,255,255,0.04); }
 tbody td { padding: 10px 14px; text-align: right; vertical-align: middle; }
 .amount-positive { color: var(--secondary); font-weight: 600; }
-.income-input { display: none; background: transparent; border: none; border-bottom: 1px dashed var(--border); color: var(--secondary); font-weight: 600; font-family: 'Heebo', sans-serif; font-size: 0.9rem; text-align: right; width: 100%; padding: 2px 0; outline: none; direction: ltr; }
+.income-input,
+.allocation-input { display: none; background: transparent; border: none; border-bottom: 1px dashed var(--border); font-weight: 600; font-family: 'Heebo', sans-serif; font-size: 0.9rem; text-align: right; width: 100%; padding: 2px 0; outline: none; direction: ltr; }
+.income-input { color: var(--secondary); }
 .income-input:focus { border-bottom-color: var(--secondary); }
+.allocation-input { color: var(--accent); }
+.allocation-input:focus { border-bottom-color: var(--accent); }
 .income-display-val { color: var(--secondary); font-weight: 600; }
+.allocation-display-val { color: var(--accent); font-weight: 600; }
 .income-editing .income-input { display: inline-block; }
 .income-editing .income-display-val { display: none; }
+.allocation-editing .allocation-input { display: inline-block; }
+.allocation-editing .allocation-display-val { display: none; }
 .amount-negative { color: var(--danger); font-weight: 600; }
 .total-row td { font-weight: 700; background: rgba(26,82,118,0.2); border-top: 2px solid var(--border); }
 .category-group-header td { font-weight: 700; background: rgba(26,82,118,0.12); padding-top: 14px; border-top: 1px solid var(--border); }

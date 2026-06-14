@@ -282,14 +282,48 @@ function renderTransactions(transactions) {
 }
 
 // ── Allocation panel ──────────────────────────────────────
-function renderAllocation(allocationRow) {
-  const inputs = Array.from(document.querySelectorAll('.allocation-input'));
-  // Sheet: חודש(0) רווח(1) עו"ש(2) קרן כספית(3) השקעות(4) אחר(5) סה"כ(6) הערות(7)
-  inputs.forEach((inp, i) => {
-    inp.value = allocationRow ? (parseFloat(allocationRow[i + 2] || 0) || '') : '';
+// ── Allocation edit mode ──────────────────────────────────
+let _allocationOriginalValues = [];
+
+function enterAllocationEditMode() {
+  const tbody = document.getElementById('allocation-tbody');
+  _allocationOriginalValues = Array.from(tbody.querySelectorAll('.allocation-input')).map(i => i.value);
+  tbody.classList.add('allocation-editing');
+  document.getElementById('edit-allocation-btn').style.display       = 'none';
+  document.getElementById('allocation-edit-mode-btns').style.display = 'flex';
+  tbody.querySelector('.allocation-input')?.focus();
+}
+
+function exitAllocationEditMode(revert = false) {
+  const tbody = document.getElementById('allocation-tbody');
+  if (revert) {
+    tbody.querySelectorAll('.allocation-input').forEach((inp, i) => {
+      inp.value = _allocationOriginalValues[i] || '';
+    });
+  }
+  tbody.querySelectorAll('tr').forEach(tr => {
+    const inp  = tr.querySelector('.allocation-input');
+    const span = tr.querySelector('.allocation-display-val');
+    if (inp && span) span.textContent = formatShekel(parseFloat(inp.value || 0));
   });
   updateAllocationTotal();
-  inputs.forEach(inp => inp.addEventListener('input', updateAllocationTotal));
+  tbody.classList.remove('allocation-editing');
+  document.getElementById('edit-allocation-btn').style.display       = '';
+  document.getElementById('allocation-edit-mode-btns').style.display = 'none';
+}
+
+function renderAllocation(allocationRow) {
+  const tbody = document.getElementById('allocation-tbody');
+  // Sheet: חודש(0) רווח(1) עו"ש(2) קרן כספית(3) השקעות(4) אחר(5) סה"כ(6) הערות(7)
+  tbody.querySelectorAll('tr').forEach((tr, i) => {
+    const inp  = tr.querySelector('.allocation-input');
+    const span = tr.querySelector('.allocation-display-val');
+    const val  = allocationRow ? (parseFloat(allocationRow[i + 2] || 0) || 0) : 0;
+    inp.value        = val || '';
+    span.textContent = formatShekel(val);
+    inp.addEventListener('input', updateAllocationTotal);
+  });
+  updateAllocationTotal();
 }
 
 function updateAllocationTotal() {
@@ -316,12 +350,13 @@ async function saveAllocation(allAllocationData) {
       await SheetsAPI.updateRange(CONFIG.SHEETS.PROFIT_ALLOCATION, `A${rowNum}:H${rowNum}`, [row]);
     }
 
+    exitAllocationEditMode();
     msg.innerHTML = '<div class="success-msg">נשמר ✓</div>';
     setTimeout(() => { msg.innerHTML = ''; }, 3000);
   } catch (err) {
     msg.innerHTML = `<div class="error-msg">${err.message}</div>`;
   } finally {
-    btn.disabled = false; btn.textContent = 'שמור';
+    btn.disabled = false; btn.textContent = 'שמור ✓';
   }
 }
 
@@ -495,6 +530,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('edit-income-btn').addEventListener('click', enterIncomeEditMode);
   document.getElementById('cancel-income-btn').addEventListener('click', exitIncomeEditMode);
+  document.getElementById('edit-allocation-btn').addEventListener('click', enterAllocationEditMode);
+  document.getElementById('cancel-allocation-btn').addEventListener('click', () => exitAllocationEditMode(true));
 
   document.getElementById('add-txn-btn').addEventListener('click', openManualEntryModal);
   document.getElementById('dash-save-manual-btn').addEventListener('click', () => saveManualEntry(true));
