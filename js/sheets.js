@@ -281,27 +281,56 @@ const SheetsAPI = (() => {
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
-  const btn = document.querySelector('[data-role="setup"]');
-  if (!btn) return;
+  // Inject settings modal (works on every page that loads sheets.js)
+  const overlay = document.createElement('div');
+  overlay.id        = 'settings-modal';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:440px;">
+      <div class="modal-title">הגדרות</div>
 
-  if (localStorage.getItem('sheetInitialized')) {
-    btn.remove();
-    return;
-  }
+      <div class="form-group mt-4 mb-0">
+        <label style="font-size:0.78rem;color:var(--text-muted);">מזהה גיליון</label>
+        <div style="font-size:0.8rem;word-break:break-all;color:var(--text-muted);margin-top:4px;">${CONFIG.SPREADSHEET_ID}</div>
+      </div>
 
-  btn.addEventListener('click', async () => {
-    btn.disabled = true;
-    btn.textContent = 'מגדיר...';
+      <hr style="border-color:var(--border);margin:20px 0;" />
+
+      <div class="mb-0">
+        <div style="font-weight:600;margin-bottom:6px;">הגדרה ראשונית של הגיליון</div>
+        <p class="text-muted" style="font-size:0.83rem;margin-bottom:12px;">יוצר לשוניות חסרות וכותרות. <strong>לא מוחק נתונים קיימים.</strong></p>
+        <button class="btn btn-outline w-full" id="settings-setup-btn">הגדר גיליון</button>
+        <div id="settings-setup-msg" class="mt-8"></div>
+      </div>
+
+      <div class="modal-actions mt-20">
+        <button class="btn btn-outline" id="settings-close-btn">סגור</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const open  = () => overlay.classList.add('open');
+  const close = () => overlay.classList.remove('open');
+
+  const triggerBtn = document.getElementById('settings-btn');
+  if (triggerBtn) triggerBtn.addEventListener('click', open);
+  document.getElementById('settings-close-btn').addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+  document.getElementById('settings-setup-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('settings-setup-btn');
+    const msg = document.getElementById('settings-setup-msg');
+    btn.disabled = true; btn.textContent = 'מגדיר...';
+    msg.innerHTML = '';
     try {
       const count = await SheetsAPI.initializeSpreadsheet();
-      const msg = count > 0 ? `✓ נוצרו ${count} גיליונות בהצלחה!` : '✓ הגיליון כבר מוגדר';
-      alert(msg);
-      localStorage.setItem('sheetInitialized', '1');
-      btn.remove();
+      const text  = count > 0 ? `✓ נוצרו ${count} לשוניות בהצלחה` : '✓ הגיליון כבר מוגדר';
+      msg.innerHTML = `<div class="success-msg">${text}</div>`;
+      btn.textContent = '✓ הוגדר';
     } catch (err) {
-      btn.textContent = '⚙️ הגדרה ראשונית';
+      msg.innerHTML = `<div class="error-msg">${err.message}</div>`;
+      btn.textContent = 'הגדר גיליון';
       btn.disabled = false;
-      alert('שגיאה: ' + err.message);
     }
   });
 });

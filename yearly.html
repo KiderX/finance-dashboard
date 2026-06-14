@@ -21,8 +21,10 @@
     </nav>
     <div class="sidebar-footer">
       <div class="user-info" id="user-email"></div>
-      <button class="btn btn-outline w-full mb-8" data-role="setup" style="font-size:0.8rem;">⚙️ הגדרה ראשונית</button>
-      <button class="btn btn-outline w-full" onclick="AuthManager.signOut()">יציאה</button>
+      <div class="d-flex gap-8">
+        <button class="btn btn-outline" style="flex:1;" onclick="AuthManager.signOut()">יציאה</button>
+        <button class="btn btn-outline" id="settings-btn" title="הגדרות" style="padding:8px 14px;font-size:1.1rem;">⚙️</button>
+      </div>
     </div>
   </aside>
 
