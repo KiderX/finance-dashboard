@@ -201,8 +201,12 @@ function normalizeCal2D(data2d, headerIdx, sourceName) {
     const date = parseCalDate(row[dateIdx]);
     if (!date) continue;
 
-    const branch   = String(branchIdx !== -1 ? (row[branchIdx] || '') : '').trim();
-    const category = CAL_CATEGORY_MAP[branch] || 'שונות';
+    const branch = String(branchIdx !== -1 ? (row[branchIdx] || '') : '').trim();
+    let category = CAL_CATEGORY_MAP[branch] || 'שונות';
+    // Merchant-name override: specific payees take precedence over Cal branch
+    for (const [pattern, mappedCat] of CONFIG.MERCHANT_CATEGORY_MAP) {
+      if (merchant.includes(pattern)) { category = mappedCat; break; }
+    }
     const txnType  = String(typeIdx !== -1 ? (row[typeIdx] || '') : '').trim();
     const notes    = String(notesIdx !== -1 ? (row[notesIdx] || '') : '').trim();
     // "DD/MM/YYYY" → month = "MM/YYYY"

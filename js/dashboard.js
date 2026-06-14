@@ -115,9 +115,14 @@ async function saveIncome(allIncomeData) {
 function renderExpenses(transactions) {
   const catTotals = {};
   transactions.forEach(row => {
-    const amount = parseFloat(row[2] || 0);
-    const rawCat = row[3] || 'שונות';
-    const cat    = CONFIG.LEGACY_CATEGORY_MAP[rawCat] || rawCat;
+    const merchant = row[1] || '';
+    const amount   = parseFloat(row[2] || 0);
+    const rawCat   = row[3] || 'שונות';
+    let cat = CONFIG.LEGACY_CATEGORY_MAP[rawCat] || rawCat;
+    // Merchant-name override: unambiguous payees always win over stored category
+    for (const [pattern, mappedCat] of CONFIG.MERCHANT_CATEGORY_MAP) {
+      if (merchant.includes(pattern)) { cat = mappedCat; break; }
+    }
     catTotals[cat] = (catTotals[cat] || 0) + amount;
   });
 

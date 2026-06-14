@@ -72,6 +72,28 @@ const CONFIG = {
   /** Flat list derived from CATEGORY_GROUPS — kept in sync below; custom cats are pushed here */
   CATEGORIES: [],
 
+  /**
+   * Merchant-name patterns → category override.
+   * Checked in order; first match wins. Takes precedence over both the Cal
+   * branch category and LEGACY_CATEGORY_MAP so unambiguous payees always land
+   * in the right bucket regardless of how Cal tagged them.
+   * Each entry: [substring_to_match, target_category]
+   */
+  MERCHANT_CATEGORY_MAP: [
+    ['חברת החשמל',      'חשמל'],
+    ['מי נתניה',        'מים וביוב'],
+    ['מי-נתניה',        'מים וביוב'],
+    ['ארנונה',          'ארנונה'],
+    ['עיריית',          'ארנונה'],
+    ['ועד הבית',        'וועד בית'],
+    ['ועד-הבית',        'וועד בית'],
+    ['ועד בית',         'וועד בית'],
+    ['שכר דירה',        'שכר דירה'],
+    ['דמי שכירות',      'שכר דירה'],
+    ['גז ישראל',        'חשמל'],
+    ['חברת גז',         'חשמל'],
+  ],
+
   /** Maps old/legacy category names to current sub-category names for display normalization */
   LEGACY_CATEGORY_MAP: {
     'הוצאות שטופות':  'שונות',
