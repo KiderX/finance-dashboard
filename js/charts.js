@@ -201,6 +201,7 @@ function renderIncomeExpensesBar(canvasId, months, incomeData, expenseData) {
 
 /**
  * Renders a donut chart for expense category or profit allocation breakdown.
+ * Seamless thin ring — borderless segments, center label appears on hover.
  * @param {string} canvasId
  * @param {string[]} labels
  * @param {number[]} data
@@ -212,26 +213,51 @@ function renderCategoryDonut(canvasId, labels, data) {
   opts.plugins.tooltip.callbacks = {
     label: (c) => `${c.label}: ${formatShekel(c.parsed)}`,
   };
-  opts.cutout = '68%';
-  opts.layout = { padding: 4 };
+  opts.cutout   = '76%';
+  opts.layout   = { padding: 6 };
+  opts.animation = { duration: 700, easing: 'easeOutCubic' };
+
+  /* Draws hovered segment's label + amount in the center hole */
+  const centerLabel = {
+    id: 'donutCenter',
+    afterDraw(chart) {
+      const active = chart.getActiveElements();
+      if (!active.length) return;
+      const { ctx, chartArea: { left, top, width, height } } = chart;
+      const cx  = left + width / 2;
+      const cy  = top  + height / 2;
+      const i   = active[0].index;
+      const lbl = chart.data.labels[i];
+      const val = chart.data.datasets[0].data[i];
+      ctx.save();
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font         = '500 10px Heebo, sans-serif';
+      ctx.fillStyle    = '#64748B';
+      ctx.fillText(lbl, cx, cy - 11);
+      ctx.font         = '700 14px Heebo, sans-serif';
+      ctx.fillStyle    = '#F1F5F9';
+      ctx.fillText(formatShekel(val), cx, cy + 8);
+      ctx.restore();
+    },
+  };
 
   return new Chart(canvas, {
     type: 'doughnut',
     data: {
       labels,
-      datasets: [
-        {
-          data,
-          backgroundColor: CHART_COLORS.allocation,
-          borderColor: 'rgba(6, 10, 20, 0.92)',
-          borderWidth: 3,
-          hoverOffset: 12,
-          hoverBorderColor: 'rgba(245, 158, 11, 0.55)',
-          hoverBorderWidth: 2,
-        },
-      ],
+      datasets: [{
+        data,
+        backgroundColor: CHART_COLORS.allocation,
+        borderColor:      'transparent',
+        borderWidth:      0,
+        borderRadius:     3,
+        hoverOffset:      10,
+        hoverBorderWidth: 0,
+      }],
     },
     options: opts,
+    plugins: [centerLabel],
   });
 }
 
