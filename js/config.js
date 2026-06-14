@@ -71,6 +71,18 @@ const CONFIG = {
 
   /** Flat list derived from CATEGORY_GROUPS — kept in sync below; custom cats are pushed here */
   CATEGORIES: [],
+
+  /** Maps old/legacy category names to current sub-category names for display normalization */
+  LEGACY_CATEGORY_MAP: {
+    'הוצאות שטופות':  'שונות',
+    'רכב':            'שונות',
+    'מזון':           'מזון ומשקאות',
+    'פנאי ובילוי':    'בזבוזים',
+    'בית':            'שונות',
+    'תיירות':         'חופשות',
+    'תקשורת':         'אינטרנט וכבלים',
+    'בגדים ואופנה':   'בזבוזים',
+  },
 };
 
 CONFIG.CATEGORIES = CONFIG.CATEGORY_GROUPS.flatMap(g => g.subs);

@@ -116,7 +116,8 @@ function renderExpenses(transactions) {
   const catTotals = {};
   transactions.forEach(row => {
     const amount = parseFloat(row[2] || 0);
-    const cat    = row[3] || 'שונות';
+    const rawCat = row[3] || 'שונות';
+    const cat    = CONFIG.LEGACY_CATEGORY_MAP[rawCat] || rawCat;
     catTotals[cat] = (catTotals[cat] || 0) + amount;
   });
 
