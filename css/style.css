@@ -471,10 +471,13 @@ tbody td { padding: 11px 14px; text-align: right; vertical-align: middle; }
 .category-group-header td {
   font-weight: 700;
   font-size: 0.875rem;
-  color: var(--text);
   background: transparent !important;
   padding: 11px 14px;
   position: relative;
+}
+/* Label cell inherits default text color; amount cell uses its own class (amount-negative = red) */
+.category-group-header td:first-child {
+  color: var(--text);
 }
 
 .category-group-header td:first-child::before {
@@ -1282,6 +1285,8 @@ select option { background: #0A1020; color: var(--text); }
 
 [data-theme="light"] .category-group-header td {
   background: transparent !important;
+}
+[data-theme="light"] .category-group-header td:first-child {
   color: var(--text);
 }
 [data-theme="light"] .category-group-header td::before { opacity: 0.35; }
