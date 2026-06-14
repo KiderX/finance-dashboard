@@ -222,6 +222,42 @@ const SheetsAPI = (() => {
     return missing.length;
   }
 
+  /**
+   * Deletes a single row from a sheet by its 0-based index in the sheet data.
+   * Index 0 = header row, index 1 = first data row, etc.
+   * @param {string} sheetName - The tab name.
+   * @param {number} rowIndex - 0-based row index (including header).
+   * @returns {Promise<Object>} API response body.
+   */
+  async function deleteRow(sheetName, rowIndex) {
+    // Fetch sheet numeric IDs (needed for deleteDimension)
+    const metaRes = await fetch(
+      `${baseUrl()}?fields=sheets.properties(sheetId,title)`,
+      { headers: authHeaders() }
+    );
+    const meta    = await handleResponse(metaRes);
+    const sheet   = (meta.sheets || []).find(s => s.properties.title === sheetName);
+    if (!sheet) throw new Error(`גיליון לא נמצא: ${sheetName}`);
+
+    const res = await fetch(`${baseUrl()}:batchUpdate`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        requests: [{
+          deleteDimension: {
+            range: {
+              sheetId: sheet.properties.sheetId,
+              dimension: 'ROWS',
+              startIndex: rowIndex,
+              endIndex: rowIndex + 1,
+            },
+          },
+        }],
+      }),
+    });
+    return handleResponse(res);
+  }
+
   // Public API
   return {
     getRange,
@@ -231,6 +267,7 @@ const SheetsAPI = (() => {
     batchGet,
     valuesToObjects,
     findMonthRow,
+    deleteRow,
     initializeSpreadsheet,
   };
 })();

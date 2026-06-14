@@ -133,8 +133,16 @@ select option { background: var(--card); color: var(--text); }
 .input-inline:focus { outline: none; border-bottom-color: var(--secondary); }
 
 /* ── Month / Year Nav ── */
-.month-nav, .year-nav { display: flex; align-items: center; gap: 12px; }
-.month-display, .year-display { font-size: 1rem; font-weight: 600; min-width: 90px; text-align: center; }
+.month-nav, .year-nav { display: flex; align-items: center; gap: 8px; direction: ltr; }
+.month-display, .year-display {
+  font-size: 1.05rem; font-weight: 700; min-width: 140px; text-align: center;
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 14px; color: var(--text);
+}
+.month-nav-btn {
+  width: 34px; height: 34px; padding: 0; font-size: 1.5rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center; border-radius: 50%;
+}
 
 /* ── Charts ── */
 .chart-container { position: relative; height: 260px; }

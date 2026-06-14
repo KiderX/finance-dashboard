@@ -1,6 +1,9 @@
 'use strict';
 
 let currentMonth = '';
+let _txData = [];  // full transactions sheet data — used for row-index lookups when deleting
+
+const HEBREW_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
 // Income sheet column layout (0-indexed):
 // חודש(0) | משכורת ראשונה(1) | משכורת שנייה(2) | בונוסים(3) | ESPP(4) | הכנסות נוספות(5) | סה"כ(6) | הערות(7)
@@ -15,6 +18,11 @@ function shiftMonth(monthStr, delta) {
   const [mm, yyyy] = monthStr.split('/').map(Number);
   const d = new Date(yyyy, mm - 1 + delta, 1);
   return `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
+function formatMonthHebrew(monthStr) {
+  const [mm, yyyy] = monthStr.split('/').map(Number);
+  return `${HEBREW_MONTHS[mm - 1]} ${yyyy}`;
 }
 
 function escHtml(s) {
@@ -171,13 +179,13 @@ function updateProfitStats() {
 
 // ── Transactions table ────────────────────────────────────
 function renderTransactions(transactions) {
-  const tbody  = document.getElementById('transactions-table-body');
-  const badge  = document.getElementById('transaction-count');
+  const tbody = document.getElementById('transactions-table-body');
+  const badge = document.getElementById('transaction-count');
   tbody.innerHTML = '';
 
   if (transactions.length === 0) {
     badge.textContent = '0 עסקאות';
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding:24px;">אין עסקאות לחודש זה</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted" style="padding:24px;">אין עסקאות לחודש זה</td></tr>';
     return;
   }
 
@@ -185,18 +193,42 @@ function renderTransactions(transactions) {
   badge.textContent = `${transactions.length} עסקאות | סה"כ: ${formatShekel(total)}`;
 
   transactions.forEach(row => {
-    const [date, merchant, amount, category, type, notes] = row;
+    const [date, merchant, amount, category, type, notes, , , , hash] = row;
     const amt = parseFloat(amount || 0);
-    const tr  = document.createElement('tr');
+    // Find the row's 0-based index in the full sheet data (including header row at index 0)
+    const fullIdx = _txData.findIndex((r, i) => i > 0 && r[9] === hash);
+    const tr = document.createElement('tr');
+    tr.dataset.rowIndex = fullIdx;
+    tr.dataset.hash     = hash || '';
     tr.innerHTML = `
       <td>${escHtml(date||'')}</td>
       <td>${escHtml(merchant||'')}</td>
       <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>
       <td><span class="badge badge-info">${escHtml(category||'')}</span></td>
       <td class="text-muted">${escHtml(type||'')}</td>
-      <td class="text-muted">${escHtml(notes||'')}</td>`;
+      <td class="text-muted">${escHtml(notes||'')}</td>
+      <td class="write-only">
+        <button class="btn btn-danger btn-sm delete-txn-btn" title="מחק עסקה">✕</button>
+      </td>`;
     tbody.appendChild(tr);
   });
+
+  tbody.querySelectorAll('.delete-txn-btn').forEach(btn =>
+    btn.addEventListener('click', async e => {
+      const tr       = e.target.closest('tr');
+      const rowIdx   = parseInt(tr.dataset.rowIndex, 10);
+      const merchant = tr.querySelector('td').nextElementSibling.textContent;
+      if (!confirm(`למחוק את העסקה "${merchant}"?`)) return;
+      btn.disabled = true; btn.textContent = '...';
+      try {
+        await SheetsAPI.deleteRow(CONFIG.SHEETS.TRANSACTIONS, rowIdx);
+        await loadMonth(currentMonth);
+      } catch (err) {
+        alert('שגיאה: ' + err.message);
+        btn.disabled = false; btn.textContent = '✕';
+      }
+    })
+  );
 }
 
 // ── Allocation panel ──────────────────────────────────────
@@ -269,31 +301,33 @@ function buildCategoryOptions(selected) {
 }
 
 function openManualEntryModal() {
-  const today = new Date();
+  // Pre-fill date: today's day in the currently viewed month
+  const today  = new Date();
+  const [mm, yyyy] = currentMonth.split('/');
   const dd = String(today.getDate()).padStart(2, '0');
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  document.getElementById('dash-manual-date').value     = `${dd}/${mm}/${today.getFullYear()}`;
+  document.getElementById('dash-manual-date').value     = `${dd}/${mm}/${yyyy}`;
   document.getElementById('dash-manual-merchant').value = '';
   document.getElementById('dash-manual-amount').value   = '';
   document.getElementById('dash-manual-notes').value    = '';
   document.getElementById('dash-manual-category').innerHTML = buildCategoryOptions(CONFIG.CATEGORIES[0]);
+  document.getElementById('dash-manual-added-count').textContent = '';
   document.getElementById('dash-manual-modal').classList.add('open');
   document.getElementById('dash-manual-merchant').focus();
 }
 
-async function saveManualEntry() {
-  const btn      = document.getElementById('dash-save-manual-btn');
+async function saveManualEntry(closeAfter) {
+  const btnSave  = document.getElementById('dash-save-manual-btn');
+  const btnMore  = document.getElementById('dash-save-add-more-btn');
   const dateVal  = document.getElementById('dash-manual-date').value.trim();
   const merchant = document.getElementById('dash-manual-merchant').value.trim();
   const amtStr   = document.getElementById('dash-manual-amount').value.trim();
   const category = document.getElementById('dash-manual-category').value;
   const notes    = document.getElementById('dash-manual-notes').value.trim();
 
-  if (!dateVal || !merchant || !amtStr) { alert('יש למלא תאריך, שם ביצ עסק וסכום'); return; }
+  if (!dateVal || !merchant || !amtStr) { alert('יש למלא תאריך, שם בית עסק וסכום'); return; }
   const amount = parseFloat(amtStr.replace(/[₪,\s]/g, ''));
   if (isNaN(amount)) { alert('סכום לא תקין'); return; }
 
-  // Normalise date to DD/MM/YYYY if user typed D/M/YYYY
   const parts = dateVal.split('/');
   const date  = parts.length === 3
     ? `${parts[0].padStart(2,'0')}/${parts[1].padStart(2,'0')}/${parts[2]}`
@@ -301,7 +335,8 @@ async function saveManualEntry() {
   const month = date.length >= 10 ? `${date.substring(3,5)}/${date.substring(6)}` : currentMonth;
   const hash  = generateHash(date, merchant, amount);
 
-  btn.disabled = true; btn.textContent = 'שומר...';
+  btnSave.disabled = true; btnMore.disabled = true;
+  btnSave.textContent = 'שומר...';
   try {
     await SheetsAPI.appendRows(CONFIG.SHEETS.TRANSACTIONS, [[
       date, merchant, amount, category, 'ידני', notes, month, 'הזנה ידנית', 'FALSE', hash,
@@ -310,19 +345,34 @@ async function saveManualEntry() {
       new Date().toLocaleString('he-IL'), 'הזנה ידנית', 1, amount,
       AuthManager.getUserEmail(), 0,
     ]]);
-    document.getElementById('dash-manual-modal').classList.remove('open');
-    await loadMonth(currentMonth);
+
+    if (closeAfter) {
+      document.getElementById('dash-manual-modal').classList.remove('open');
+      await loadMonth(currentMonth);
+    } else {
+      // Keep modal open, reset fields, show success indicator
+      const countEl = document.getElementById('dash-manual-added-count');
+      const prev    = parseInt(countEl.dataset.count || '0', 10) + 1;
+      countEl.dataset.count   = prev;
+      countEl.textContent     = `✓ נוספו ${prev} עסקאות`;
+      document.getElementById('dash-manual-merchant').value = '';
+      document.getElementById('dash-manual-amount').value   = '';
+      document.getElementById('dash-manual-notes').value    = '';
+      document.getElementById('dash-manual-merchant').focus();
+    }
   } catch (err) {
     alert('שגיאה: ' + err.message);
   } finally {
-    btn.disabled = false; btn.textContent = 'הוסף עסקה ▶';
+    btnSave.disabled = false; btnMore.disabled = false;
+    btnSave.textContent = 'שמור וסגור ✓';
   }
 }
 
 // ── Load month ────────────────────────────────────────────
 async function loadMonth(monthStr) {
   currentMonth = monthStr;
-  document.getElementById('month-display').textContent = monthStr;
+  localStorage.setItem('lastViewedMonth', monthStr);
+  document.getElementById('month-display').textContent = formatMonthHebrew(monthStr);
 
   const loading  = document.getElementById('loading');
   const content  = document.getElementById('content');
@@ -340,6 +390,8 @@ async function loadMonth(monthStr) {
       SheetsAPI.getSheet(CONFIG.SHEETS.TRANSACTIONS),
       SheetsAPI.getSheet(CONFIG.SHEETS.PROFIT_ALLOCATION),
     ]);
+
+    _txData = txData;  // store for delete row lookups
 
     const incomeRow     = findRowForMonth(incomeData, monthStr);
     const transactions  = filterTransactionsByMonth(txData, monthStr);
@@ -378,9 +430,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('next-month').addEventListener('click', () => loadMonth(shiftMonth(currentMonth, +1)));
 
   document.getElementById('add-txn-btn').addEventListener('click', openManualEntryModal);
-  document.getElementById('dash-save-manual-btn').addEventListener('click', saveManualEntry);
-  document.getElementById('dash-cancel-manual-btn').addEventListener('click', () =>
-    document.getElementById('dash-manual-modal').classList.remove('open'));
+  document.getElementById('dash-save-manual-btn').addEventListener('click', () => saveManualEntry(true));
+  document.getElementById('dash-save-add-more-btn').addEventListener('click', () => saveManualEntry(false));
+  document.getElementById('dash-cancel-manual-btn').addEventListener('click', async () => {
+    document.getElementById('dash-manual-modal').classList.remove('open');
+    // If entries were saved while modal was open, reload to reflect them
+    if (parseInt(document.getElementById('dash-manual-added-count').dataset.count || '0', 10) > 0) {
+      await loadMonth(currentMonth);
+    }
+  });
   document.getElementById('dash-manual-category').addEventListener('change', e => {
     if (e.target.value !== '__new__') return;
     const name = prompt('שם הקטגוריה החדשה:');
@@ -393,5 +451,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  await loadMonth(getCurrentMonthStr());
+  const savedMonth = localStorage.getItem('lastViewedMonth');
+  await loadMonth(savedMonth || getCurrentMonthStr());
 });

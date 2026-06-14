@@ -32,10 +32,10 @@
         <button class="hamburger" id="hamburger">☰</button>
         <h1 class="page-title">דשבורד חודשי</h1>
       </div>
-      <div class="month-nav">
-        <button class="btn btn-outline btn-sm" id="prev-month">◀</button>
+      <div class="month-nav" dir="ltr">
+        <button class="btn btn-outline btn-sm month-nav-btn" id="prev-month">&#8249;</button>
         <span class="month-display" id="month-display">—</span>
-        <button class="btn btn-outline btn-sm" id="next-month">▶</button>
+        <button class="btn btn-outline btn-sm month-nav-btn" id="next-month">&#8250;</button>
       </div>
     </div>
 
@@ -122,7 +122,7 @@
               <thead>
                 <tr>
                   <th>תאריך</th><th>שם בית עסק</th><th>סכום</th>
-                  <th>קטגוריה</th><th>סוג</th><th>הערות</th>
+                  <th>קטגוריה</th><th>סוג</th><th>הערות</th><th class="write-only"></th>
                 </tr>
               </thead>
               <tbody id="transactions-table-body"></tbody>
@@ -161,9 +161,13 @@
       <label>הערות (אופציונלי)</label>
       <input type="text" id="dash-manual-notes" placeholder="הערות..." />
     </div>
-    <div class="modal-actions mt-16">
-      <button class="btn btn-outline" id="dash-cancel-manual-btn">ביטול</button>
-      <button class="btn btn-success" id="dash-save-manual-btn">הוסף עסקה ▶</button>
+    <div class="modal-actions mt-16" style="flex-wrap:wrap;gap:8px;">
+      <button class="btn btn-outline" id="dash-cancel-manual-btn">סגור</button>
+      <div style="display:flex;gap:8px;align-items:center;flex:1;justify-content:flex-end;">
+        <span id="dash-manual-added-count" class="text-success" style="font-size:0.85rem;" data-count="0"></span>
+        <button class="btn btn-outline btn-sm" id="dash-save-add-more-btn">שמור והוסף עוד ＋</button>
+        <button class="btn btn-success" id="dash-save-manual-btn">שמור וסגור ✓</button>
+      </div>
     </div>
   </div>
 </div>
