@@ -19,6 +19,49 @@ function generateHash(date, merchant, amount) {
   catch (_) { return btoa(str); }
 }
 
+// ── Custom categories ─────────────────────────────────────
+function loadCustomCategories() {
+  const saved = JSON.parse(localStorage.getItem('customCategories') || '[]');
+  saved.forEach(cat => { if (!CONFIG.CATEGORIES.includes(cat)) CONFIG.CATEGORIES.push(cat); });
+}
+
+function addCustomCategory(name) {
+  if (!name || CONFIG.CATEGORIES.includes(name)) return;
+  CONFIG.CATEGORIES.push(name);
+  const saved = JSON.parse(localStorage.getItem('customCategories') || '[]');
+  saved.push(name);
+  localStorage.setItem('customCategories', JSON.stringify(saved));
+}
+
+function buildCategoryOptions(selected) {
+  return CONFIG.CATEGORIES.map(c =>
+    `<option value="${escHtml(c)}" ${c === selected ? 'selected' : ''}>${escHtml(c)}</option>`
+  ).join('') + `<option value="__new__">＋ קטגוריה חדשה...</option>`;
+}
+
+function handleCatChange(select, rowIdx) {
+  if (select.value !== '__new__') {
+    if (rowIdx !== null) UploadState.rows[rowIdx]['קטגוריה'] = select.value;
+    return;
+  }
+  const name = prompt('שם הקטגוריה החדשה:');
+  if (name && name.trim()) {
+    addCustomCategory(name.trim());
+    // Refresh every category select in the preview
+    document.querySelectorAll('.cat-select').forEach(s => {
+      const cur = s === select ? name.trim() : s.value;
+      s.innerHTML = buildCategoryOptions(cur);
+      s.value = cur;
+    });
+    if (rowIdx !== null) UploadState.rows[rowIdx]['קטגוריה'] = name.trim();
+  } else {
+    // Revert to previous value
+    const prev = rowIdx !== null ? (UploadState.rows[rowIdx]['קטגוריה'] || CONFIG.CATEGORIES[0]) : CONFIG.CATEGORIES[0];
+    select.innerHTML = buildCategoryOptions(prev);
+    select.value = prev;
+  }
+}
+
 // Strip invisible Unicode direction/BOM marks that Israeli bank exports embed in Hebrew text
 function stripMarks(s) {
   return String(s).replace(/[‎‏‪-‮﻿ ]/g, '').trim();
@@ -26,22 +69,22 @@ function stripMarks(s) {
 
 // ── Cal normalization ─────────────────────────────────────
 const CAL_CATEGORY_MAP = {
-  'אופנה':             'בגדים ואופנה',
-  'אנרגיה':            'רכב',
+  'אופנה':             'בזבוזים',
+  'אנרגיה':            'דלק',
   'ביטוח ופיננסים':    'ביטוח',
   'חינוך':             'חינוך',
-  'מוסדות':            'הוצאות שטופות',
-  'מזון ומשקאות':      'מזון',
+  'מוסדות':            'שונות',
+  'מזון ומשקאות':      'מזון ומשקאות',
   'מזון מהיר':         'מסעדות',
   'מסעדות':            'מסעדות',
-  'משחקי מזל':         'פנאי ובילוי',
-  'פנאי בילוי':        'פנאי ובילוי',
-  'ריהוט ובית':        'בית',
-  'רכב ותחבורה':       'רכב',
+  'משחקי מזל':         'בזבוזים',
+  'פנאי בילוי':        'בזבוזים',
+  'ריהוט ובית':        'שונות',
+  'רכב ותחבורה':       'תחבורה',
   'רפואה ובריאות':     'בריאות',
   'שונות':             'שונות',
-  'תיירות':            'תיירות',
-  'תקשורת ומחשבים':    'תקשורת',
+  'תיירות':            'חופשות',
+  'תקשורת ומחשבים':    'אינטרנט וכבלים',
 };
 
 function parseCalDate(val) {
@@ -440,9 +483,7 @@ function renderPreview(rows) {
       <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>
       <td>
         <select class="input-inline cat-select" data-idx="${idx}">
-          ${CONFIG.CATEGORIES.map(c =>
-            `<option value="${c}" ${c === category ? 'selected' : ''}>${c}</option>`
-          ).join('')}
+          ${buildCategoryOptions(category)}
         </select>
       </td>
       <td class="text-muted">${escHtml(txnType)}</td>
@@ -452,16 +493,22 @@ function renderPreview(rows) {
       </td>
       <td>
         <button class="btn btn-sm btn-outline split-btn" data-idx="${idx}">פצל</button>
+        <button class="btn btn-sm btn-danger rm-btn" data-idx="${idx}" title="מחק שורה">✕</button>
       </td>`;
     tbody.appendChild(tr);
   });
 
   tbody.querySelectorAll('.cat-select').forEach(sel =>
-    sel.addEventListener('change', e => { UploadState.rows[+e.target.dataset.idx]['קטגוריה'] = e.target.value; }));
+    sel.addEventListener('change', e => handleCatChange(e.target, +e.target.dataset.idx)));
   tbody.querySelectorAll('.notes-input').forEach(inp =>
     inp.addEventListener('input', e => { UploadState.rows[+e.target.dataset.idx]['הערות'] = e.target.value; }));
   tbody.querySelectorAll('.split-btn').forEach(btn =>
     btn.addEventListener('click', e => openSplitModal(+e.target.dataset.idx)));
+  tbody.querySelectorAll('.rm-btn').forEach(btn =>
+    btn.addEventListener('click', e => {
+      UploadState.rows.splice(+e.target.dataset.idx, 1);
+      renderPreview(UploadState.rows);
+    }));
 }
 
 // ── Step 3: Duplicate detection ───────────────────────────
@@ -571,6 +618,58 @@ async function doUpload() {
   }
 }
 
+// ── Manual entry modal ────────────────────────────────────
+function openManualEntryModal() {
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2, '0');
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const yyyy = today.getFullYear();
+  document.getElementById('manual-date').value     = `${dd}/${mm}/${yyyy}`;
+  document.getElementById('manual-merchant').value = '';
+  document.getElementById('manual-amount').value   = '';
+  document.getElementById('manual-notes').value    = '';
+  const catSel = document.getElementById('manual-category');
+  catSel.innerHTML = buildCategoryOptions(CONFIG.CATEGORIES[0]);
+  document.getElementById('manual-modal').classList.add('open');
+  document.getElementById('manual-merchant').focus();
+}
+
+function saveManualEntry() {
+  const dateRaw  = document.getElementById('manual-date').value.trim();
+  const merchant = document.getElementById('manual-merchant').value.trim();
+  const amtRaw   = document.getElementById('manual-amount').value.trim();
+  const category = document.getElementById('manual-category').value;
+  const notes    = document.getElementById('manual-notes').value.trim();
+
+  if (!dateRaw || !merchant || !amtRaw) {
+    alert('יש למלא תאריך, שם בית עסק וסכום');
+    return;
+  }
+  const amount = parseFloat(amtRaw.replace(/[₪,\s]/g, ''));
+  if (isNaN(amount)) { alert('סכום לא תקין'); return; }
+
+  const date  = parseCalDate(dateRaw) || dateRaw;
+  const month = date.length >= 10 ? `${date.substring(3, 5)}/${date.substring(6)}` : '';
+
+  const row = {
+    'תאריך':      date,
+    'שם בית עסק': merchant,
+    'סכום חיוב':  String(amount),
+    'קטגוריה':    category,
+    'סוג עסקה':   'ידני',
+    'הערות':      notes,
+    'חודש':       month,
+    'מקור כרטיס': 'הזנה ידנית',
+    'פוצל':       'FALSE',
+  };
+
+  UploadState.rows.push(row);
+  UploadState.fileNames = [...new Set([...UploadState.fileNames, 'הזנה ידנית'])];
+  document.getElementById('manual-modal').classList.remove('open');
+  renderPreview(UploadState.rows);
+  if (UploadState.step < 2) setStep(2);
+}
+
 // ── Split modal ───────────────────────────────────────────
 let splitIdx = -1;
 
@@ -646,6 +745,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!email) return;
   document.getElementById('user-email').textContent = email;
 
+  loadCustomCategories();
   initUploadZone();
   setStep(1);
 
@@ -660,4 +760,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('cancel-split-btn').addEventListener('click', () =>
     document.getElementById('split-modal').classList.remove('open'));
   document.getElementById('restart-btn').addEventListener('click', () => window.location.reload());
+
+  // Manual entry modal
+  document.getElementById('add-manual-btn').addEventListener('click', openManualEntryModal);
+  document.getElementById('add-manual-btn-2').addEventListener('click', openManualEntryModal);
+  document.getElementById('save-manual-btn').addEventListener('click', saveManualEntry);
+  document.getElementById('cancel-manual-btn').addEventListener('click', () =>
+    document.getElementById('manual-modal').classList.remove('open'));
+  document.getElementById('manual-category').addEventListener('change', e => {
+    if (e.target.value === '__new__') {
+      const name = prompt('שם הקטגוריה החדשה:');
+      if (name && name.trim()) {
+        addCustomCategory(name.trim());
+        e.target.innerHTML = buildCategoryOptions(name.trim());
+        e.target.value = name.trim();
+      } else {
+        e.target.value = CONFIG.CATEGORIES[0];
+      }
+    }
+  });
 });
