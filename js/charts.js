@@ -201,7 +201,7 @@ function renderIncomeExpensesBar(canvasId, months, incomeData, expenseData) {
 
 /**
  * Renders a donut chart for expense category or profit allocation breakdown.
- * Seamless thin ring — borderless segments, center label appears on hover.
+ * Thin seamless ring with per-segment colored glow and center hover label.
  * @param {string} canvasId
  * @param {string[]} labels
  * @param {number[]} data
@@ -213,9 +213,30 @@ function renderCategoryDonut(canvasId, labels, data) {
   opts.plugins.tooltip.callbacks = {
     label: (c) => `${c.label}: ${formatShekel(c.parsed)}`,
   };
-  opts.cutout   = '76%';
-  opts.layout   = { padding: 6 };
-  opts.animation = { duration: 700, easing: 'easeOutCubic' };
+  opts.cutout    = '76%';
+  opts.layout    = { padding: 12 };
+  opts.animation = { duration: 800, easing: 'easeOutCubic' };
+
+  /*
+   * Re-draws every arc with a canvas shadow in the arc's own color.
+   * shadowBlur 14 = subtle glow (reference-style charts use 24-30; this is ~half).
+   */
+  const arcGlow = {
+    id: 'arcGlow',
+    afterDatasetsDraw(chart) {
+      const { ctx }  = chart;
+      const meta     = chart.getDatasetMeta(0);
+      const colors   = chart.data.datasets[0].backgroundColor;
+      ctx.save();
+      meta.data.forEach((arc, i) => {
+        const color = Array.isArray(colors) ? colors[i % colors.length] : colors;
+        ctx.shadowBlur  = 14;
+        ctx.shadowColor = color;
+        arc.draw(ctx);
+      });
+      ctx.restore();
+    },
+  };
 
   /* Draws hovered segment's label + amount in the center hole */
   const centerLabel = {
@@ -251,13 +272,13 @@ function renderCategoryDonut(canvasId, labels, data) {
         backgroundColor: CHART_COLORS.allocation,
         borderColor:      'transparent',
         borderWidth:      0,
-        borderRadius:     3,
-        hoverOffset:      10,
+        borderRadius:     4,
+        hoverOffset:      12,
         hoverBorderWidth: 0,
       }],
     },
     options: opts,
-    plugins: [centerLabel],
+    plugins: [arcGlow, centerLabel],
   });
 }
 
