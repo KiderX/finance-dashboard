@@ -56,7 +56,13 @@
         <div class="card">
           <div class="d-flex justify-between align-center mb-16">
             <div class="card-title mb-0">הכנסות</div>
-            <button class="btn btn-sm btn-success write-only" id="save-income-btn">שמור</button>
+            <div class="d-flex gap-8 align-center write-only" id="income-actions">
+              <button class="btn btn-sm btn-outline" id="edit-income-btn">✏️ עריכה</button>
+              <span id="income-edit-mode-btns" style="display:none;" class="d-flex gap-8">
+                <button class="btn btn-sm btn-outline" id="cancel-income-btn">ביטול</button>
+                <button class="btn btn-sm btn-success" id="save-income-btn">שמור ✓</button>
+              </span>
+            </div>
           </div>
           <div class="table-wrapper">
             <table>

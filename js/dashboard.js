@@ -80,6 +80,27 @@ function renderIncome(incomeRow) {
   updateProfitStats();
 }
 
+// ── Income edit mode ──────────────────────────────────────
+function enterIncomeEditMode() {
+  document.getElementById('income-table-body').classList.add('income-editing');
+  document.getElementById('edit-income-btn').style.display    = 'none';
+  document.getElementById('income-edit-mode-btns').style.display = 'flex';
+  document.querySelector('#income-table-body .income-input')?.focus();
+}
+
+function exitIncomeEditMode() {
+  const tbody = document.getElementById('income-table-body');
+  // Sync display spans with current input values before hiding inputs
+  tbody.querySelectorAll('tr').forEach(tr => {
+    const inp  = tr.querySelector('.income-input');
+    const span = tr.querySelector('.income-display-val');
+    if (inp && span) span.textContent = formatShekel(parseFloat(inp.value || 0));
+  });
+  tbody.classList.remove('income-editing');
+  document.getElementById('edit-income-btn').style.display       = '';
+  document.getElementById('income-edit-mode-btns').style.display = 'none';
+}
+
 // ── Save income ───────────────────────────────────────────
 async function saveIncome(allIncomeData) {
   const btn = document.getElementById('save-income-btn');
@@ -102,12 +123,13 @@ async function saveIncome(allIncomeData) {
     document.getElementById('income-total-cell').textContent = formatShekel(total);
     document.getElementById('stat-income').textContent = formatShekel(total);
     updateProfitStats();
+    exitIncomeEditMode();
     msg.innerHTML = '<div class="success-msg">נשמר ✓</div>';
     setTimeout(() => { msg.innerHTML = ''; }, 3000);
   } catch (err) {
     msg.innerHTML = `<div class="error-msg">${err.message}</div>`;
   } finally {
-    btn.disabled = false; btn.textContent = 'שמור';
+    btn.disabled = false; btn.textContent = 'שמור ✓';
   }
 }
 
@@ -465,6 +487,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('prev-month').addEventListener('click', () => loadMonth(shiftMonth(currentMonth, -1)));
   document.getElementById('next-month').addEventListener('click', () => loadMonth(shiftMonth(currentMonth, +1)));
+
+  document.getElementById('edit-income-btn').addEventListener('click', enterIncomeEditMode);
+  document.getElementById('cancel-income-btn').addEventListener('click', exitIncomeEditMode);
 
   document.getElementById('add-txn-btn').addEventListener('click', openManualEntryModal);
   document.getElementById('dash-save-manual-btn').addEventListener('click', () => saveManualEntry(true));
