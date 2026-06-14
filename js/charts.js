@@ -215,7 +215,7 @@ function buildDonutLegend(container, labels, data, colors) {
     const pct   = total > 0 ? Math.round((data[i] / total) * 100) + '%' : '0%';
     return `
       <div class="donut-legend-item">
-        <span class="donut-legend-dot" style="background:${color};box-shadow:0 0 4px 2px ${color}66;"></span>
+        <span class="donut-legend-dot" style="background:${color};box-shadow:0 0 3px 1px ${color}55;"></span>
         <span class="donut-legend-name">${lbl}</span>
         <span class="donut-legend-pct">${pct}</span>
       </div>`;
@@ -240,24 +240,6 @@ function renderCategoryDonut(canvasId, labels, data, legendContainerId) {
   opts.cutout    = '76%';
   opts.layout    = { padding: 12 };
   opts.animation = { duration: 800, easing: 'easeOutCubic' };
-
-  /* Re-draws every arc with a canvas shadow in the arc's own color. */
-  const arcGlow = {
-    id: 'arcGlow',
-    afterDatasetsDraw(chart) {
-      const { ctx } = chart;
-      const meta    = chart.getDatasetMeta(0);
-      const colors  = chart.data.datasets[0].backgroundColor;
-      ctx.save();
-      meta.data.forEach((arc, i) => {
-        const color = Array.isArray(colors) ? colors[i % colors.length] : colors;
-        ctx.shadowBlur  = 7;
-        ctx.shadowColor = color;
-        arc.draw(ctx);
-      });
-      ctx.restore();
-    },
-  };
 
   /* Shows hovered segment's name + amount inside the center hole (no popup). */
   const centerLabel = {
@@ -299,7 +281,7 @@ function renderCategoryDonut(canvasId, labels, data, legendContainerId) {
       }],
     },
     options: opts,
-    plugins: [arcGlow, centerLabel],
+    plugins: [centerLabel],
   });
 
   if (legendContainerId) {
