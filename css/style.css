@@ -1537,10 +1537,6 @@ body.sidebar-collapsed-mode .sidebar-footer .btn:not(#settings-btn):not(#theme-t
   border-top: 2px solid rgba(245, 158, 11, 0.22);
 }
 
-/* Full-width chart card inside the dashboard grid */
-.dashboard-grid .card:has(#income-expense-chart) {
-  grid-column: 1 / -1;
-}
 
 /* Full-width bar chart gets extra height */
 .card:has(#income-expense-chart) .chart-container {

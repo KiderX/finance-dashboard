@@ -85,7 +85,8 @@
         <div class="card"><div class="card-title">אחוז חיסכון</div><div class="card-value" id="stat-savings-rate">0%</div></div>
       </div>
 
-      <div class="dashboard-grid">
+      <!-- Row 1: income & expense tables — 2 columns -->
+      <div class="dashboard-grid" style="margin-bottom:18px;">
         <!-- Income panel -->
         <div class="card">
           <div class="d-flex justify-between align-center mb-16">
@@ -115,19 +116,14 @@
             </table>
           </div>
         </div>
+      </div>
 
-        <!-- Income vs Expenses chart -->
+      <!-- Row 2: bar chart + profit allocation + donut — 3 columns (bento) -->
+      <div class="bento-grid" style="margin-bottom:18px;">
+        <!-- Income vs Expenses chart — 2fr (widest, on right in RTL) -->
         <div class="card">
           <div class="card-title">הוצאות מול הכנסות</div>
           <div class="chart-container"><canvas id="income-expense-chart"></canvas></div>
-        </div>
-
-        <!-- Category breakdown donut -->
-        <div class="card">
-          <div class="card-title">פיזור הוצאות לפי קטגוריה</div>
-          <div class="chart-glow-wrap chart-container-md">
-            <canvas id="category-donut-chart"></canvas>
-          </div>
         </div>
 
         <!-- Profit allocation (write-only) -->
@@ -154,8 +150,17 @@
           </div>
         </div>
 
-        <!-- Transactions list -->
-        <div class="card" style="grid-column:1/-1;">
+        <!-- Category breakdown donut -->
+        <div class="card">
+          <div class="card-title">פיזור הוצאות לפי קטגוריה</div>
+          <div class="chart-glow-wrap chart-container-md">
+            <canvas id="category-donut-chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: transactions — full width -->
+      <div class="card">
           <div class="d-flex justify-between align-center mb-16">
             <div class="card-title mb-0">עסקאות החודש</div>
             <div class="d-flex gap-8 align-center">
@@ -175,7 +180,6 @@
             </table>
           </div>
         </div>
-      </div>
     </div>
   </main>
 </div>
