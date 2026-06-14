@@ -215,7 +215,7 @@ function buildDonutLegend(container, labels, data, colors) {
     const pct   = total > 0 ? Math.round((data[i] / total) * 100) + '%' : '0%';
     return `
       <div class="donut-legend-item">
-        <span class="donut-legend-dot" style="background:${color};box-shadow:0 0 6px 3px ${color}99;"></span>
+        <span class="donut-legend-dot" style="background:${color};box-shadow:0 0 4px 2px ${color}66;"></span>
         <span class="donut-legend-name">${lbl}</span>
         <span class="donut-legend-pct">${pct}</span>
       </div>`;
@@ -251,7 +251,7 @@ function renderCategoryDonut(canvasId, labels, data, legendContainerId) {
       ctx.save();
       meta.data.forEach((arc, i) => {
         const color = Array.isArray(colors) ? colors[i % colors.length] : colors;
-        ctx.shadowBlur  = 14;
+        ctx.shadowBlur  = 7;
         ctx.shadowColor = color;
         arc.draw(ctx);
       });
