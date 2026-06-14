@@ -238,8 +238,13 @@ function renderTransactions(transactions) {
   badge.textContent = `${transactions.length} עסקאות | סה"כ: ${formatShekel(total)}`;
 
   transactions.forEach(row => {
-    const [date, merchant, amount, category, type, notes, , , , hash] = row;
+    const [date, merchant, amount, rawCategory, type, notes, , , , hash] = row;
     const amt = parseFloat(amount || 0);
+    // Normalize category for display — same logic as renderExpenses
+    let category = CONFIG.LEGACY_CATEGORY_MAP[rawCategory] || rawCategory;
+    for (const [pattern, mappedCat] of CONFIG.MERCHANT_CATEGORY_MAP) {
+      if ((merchant || '').includes(pattern)) { category = mappedCat; break; }
+    }
     // Find the row's 0-based index in the full sheet data (including header row at index 0)
     const fullIdx = _txData.findIndex((r, i) => i > 0 && r[9] === hash);
     const tr = document.createElement('tr');
