@@ -282,29 +282,7 @@ document.getElementById('close-allocation-modal-btn')?.addEventListener('click',
 document.getElementById('close-dash-manual-modal-btn')?.addEventListener('click', () =>
   document.getElementById('dash-manual-modal').classList.remove('open'));
 
-// Category donut chart — observes expenses table for data
-(function() {
-  const observer = new MutationObserver(() => {
-    const tbody = document.getElementById('expenses-table-body');
-    if (!tbody || !tbody.children.length) return;
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    const labels = [];
-    const values = [];
-    rows.forEach(row => {
-      const cells = row.querySelectorAll('td');
-      if (cells.length >= 2) {
-        const label = cells[0]?.textContent?.trim();
-        const val = parseFloat((cells[1]?.textContent || '0').replace(/[₪,]/g, ''));
-        if (label && val > 0) { labels.push(label); values.push(val); }
-      }
-    });
-    if (labels.length > 0 && typeof renderCategoryDonut === 'function') {
-      renderCategoryDonut('category-donut-chart', labels, values);
-      observer.disconnect();
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-})();
+// Category donut is rendered by dashboard.js → renderExpenses() with parent groups
 </script>
 </body>
 </html>

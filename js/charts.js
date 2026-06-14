@@ -16,8 +16,8 @@ const CHART_COLORS = {
   muted:      '#64748B',
   cardBg:     'rgba(6, 10, 20, 0.97)',
   text:       '#F1F5F9',
-  grid:       'rgba(255, 255, 255, 0.04)',
-  allocation: ['#10B981', '#F59E0B', '#8B5CF6', '#0EA5E9', '#FB7185'],
+  grid:       'rgba(255, 255, 255, 0.035)',
+  allocation: ['#22D3EE', '#F59E0B', '#10B981', '#8B5CF6', '#FB7185'],
 };
 
 const SAVINGS_THRESHOLDS = { good: 20, warn: 10 };
@@ -86,7 +86,7 @@ function defaultOptions() {
   return {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 550, easing: 'easeOutQuart' },
+    animation: { duration: 480, easing: 'easeOutCubic' },
     plugins: {
       legend: {
         labels: {
@@ -173,10 +173,12 @@ function renderIncomeExpensesBar(canvasId, months, incomeData, expenseData) {
           backgroundColor: (context) => {
             const { chartArea } = context.chart;
             if (!chartArea) return CHART_COLORS.income;
-            return makeGradient(ctx, chartArea, '#10B981', 0.88, 0.5);
+            return makeGradient(ctx, chartArea, '#10B981', 0.82, 0.42);
           },
-          borderRadius: 10,
+          borderRadius: 8,
           borderSkipped: false,
+          barPercentage: 0.7,
+          categoryPercentage: 0.75,
         },
         {
           label: 'הוצאות',
@@ -184,10 +186,12 @@ function renderIncomeExpensesBar(canvasId, months, incomeData, expenseData) {
           backgroundColor: (context) => {
             const { chartArea } = context.chart;
             if (!chartArea) return CHART_COLORS.expense;
-            return makeGradient(ctx, chartArea, '#F43F5E', 0.88, 0.5);
+            return makeGradient(ctx, chartArea, '#F43F5E', 0.82, 0.42);
           },
-          borderRadius: 10,
+          borderRadius: 8,
           borderSkipped: false,
+          barPercentage: 0.7,
+          categoryPercentage: 0.75,
         },
       ],
     },
@@ -208,7 +212,8 @@ function renderCategoryDonut(canvasId, labels, data) {
   opts.plugins.tooltip.callbacks = {
     label: (c) => `${c.label}: ${formatShekel(c.parsed)}`,
   };
-  opts.cutout = '62%';
+  opts.cutout = '68%';
+  opts.layout = { padding: 4 };
 
   return new Chart(canvas, {
     type: 'doughnut',
@@ -218,9 +223,11 @@ function renderCategoryDonut(canvasId, labels, data) {
         {
           data,
           backgroundColor: CHART_COLORS.allocation,
-          borderColor: 'rgba(5, 11, 24, 0.9)',
+          borderColor: 'rgba(6, 10, 20, 0.92)',
           borderWidth: 3,
-          hoverOffset: 6,
+          hoverOffset: 12,
+          hoverBorderColor: 'rgba(245, 158, 11, 0.55)',
+          hoverBorderWidth: 2,
         },
       ],
     },
@@ -240,9 +247,9 @@ function renderSavingsRateLine(canvasId, months, rates) {
   const canvas = prepareCanvas(canvasId);
   const ctx    = canvas.getContext('2d');
   const opts   = defaultOptions();
-  opts.scales  = defaultScales((v) => `${v}%`);
+  opts.scales  = defaultScales((v) => `${v.toFixed(0)}%`);
   opts.scales.y.min = 0;
-  opts.scales.y.max = 100;
+  opts.scales.y.suggestedMax = 100;
   opts.plugins.tooltip.callbacks = {
     label: (c) => `חיסכון: ${c.parsed.y.toFixed(1)}%`,
   };
@@ -258,17 +265,19 @@ function renderSavingsRateLine(canvasId, months, rates) {
           label: 'אחוז חיסכון',
           data: rates,
           borderColor: CHART_COLORS.gold,
+          borderWidth: 2.5,
           backgroundColor: (context) => {
             const { chartArea } = context.chart;
-            if (!chartArea) return 'rgba(245,158,11,0.15)';
-            return makeAreaGradient(ctx, chartArea, '#F59E0B');
+            if (!chartArea) return 'rgba(245,158,11,0.18)';
+            return makeGradient(ctx, chartArea, '#F59E0B', 0.28, 0.02);
           },
           pointBackgroundColor: pointColors,
           pointBorderColor: '#050B18',
           pointBorderWidth: 2,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          tension: 0.4,
+          pointRadius: 6,
+          pointHoverRadius: 9,
+          pointHoverBorderWidth: 2,
+          tension: 0.45,
           fill: true,
         },
       ],

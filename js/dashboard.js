@@ -321,6 +321,18 @@ function renderExpenses(transactions) {
   window._dashExpenses = grandTotal;
   updateProfitStats();
   renderIncomeExpensesBar('income-expense-chart', [currentMonth], [window._dashIncome || 0], [grandTotal]);
+
+  // Render category donut using parent groups only — clean & uncluttered
+  const donutLabels = [], donutValues = [];
+  CONFIG.CATEGORY_GROUPS.forEach(group => {
+    const total = group.subs.reduce((s, c) => s + (catTotals[c] || 0), 0) +
+      (group.subGroups || []).reduce((s, sg) =>
+        s + sg.subs.reduce((s2, c) => s2 + (catTotals[c] || 0), 0), 0);
+    if (total > 0) { donutLabels.push(group.name); donutValues.push(total); }
+  });
+  if (donutLabels.length && typeof renderCategoryDonut === 'function') {
+    renderCategoryDonut('category-donut-chart', donutLabels, donutValues);
+  }
 }
 
 // ── Stats calculations ────────────────────────────────────────
