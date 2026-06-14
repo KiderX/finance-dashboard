@@ -1,6 +1,6 @@
 /**
- * @fileoverview Chart.js rendering helpers — Premium Fintech Dark v3.
- * Violet accent (#8B5CF6), gradient bar fills, glass tooltips, ultra-subtle grid.
+ * @fileoverview Chart.js rendering helpers — Premium Fintech Dark v4.
+ * Gold accent (#F59E0B), gradient bar fills, glass tooltips, ultra-subtle grid.
  */
 
 'use strict';
@@ -8,16 +8,16 @@
 const CHART_COLORS = {
   income:     '#10B981',
   expense:    '#F43F5E',
-  accent:     '#8B5CF6',
+  accent:     '#F59E0B',
   violet:     '#8B5CF6',
   violetLite: '#A78BFA',
   gold:       '#F59E0B',
-  primary:    '#8B5CF6',
+  primary:    '#F59E0B',
   muted:      '#64748B',
-  cardBg:     'rgba(8, 14, 28, 0.95)',
+  cardBg:     'rgba(6, 10, 20, 0.97)',
   text:       '#F1F5F9',
   grid:       'rgba(255, 255, 255, 0.04)',
-  allocation: ['#10B981', '#8B5CF6', '#F59E0B', '#0EA5E9', '#FB7185'],
+  allocation: ['#10B981', '#F59E0B', '#8B5CF6', '#0EA5E9', '#FB7185'],
 };
 
 const SAVINGS_THRESHOLDS = { good: 20, warn: 10 };
@@ -101,7 +101,7 @@ function defaultOptions() {
         backgroundColor: CHART_COLORS.cardBg,
         titleColor: CHART_COLORS.text,
         bodyColor:  '#94A3B8',
-        borderColor: 'rgba(139, 92, 246, 0.28)',
+        borderColor: 'rgba(245, 158, 11, 0.28)',
         borderWidth: 1,
         padding: 13,
         cornerRadius: 14,
@@ -257,11 +257,11 @@ function renderSavingsRateLine(canvasId, months, rates) {
         {
           label: 'אחוז חיסכון',
           data: rates,
-          borderColor: CHART_COLORS.violet,
+          borderColor: CHART_COLORS.gold,
           backgroundColor: (context) => {
             const { chartArea } = context.chart;
-            if (!chartArea) return 'rgba(139,92,246,0.15)';
-            return makeAreaGradient(ctx, chartArea, '#8B5CF6');
+            if (!chartArea) return 'rgba(245,158,11,0.15)';
+            return makeAreaGradient(ctx, chartArea, '#F59E0B');
           },
           pointBackgroundColor: pointColors,
           pointBorderColor: '#050B18',
