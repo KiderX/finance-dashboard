@@ -10,6 +10,19 @@
  * Google Sheets API client singleton.
  */
 const SheetsAPI = (() => {
+  // Cache numeric sheetId per tab name — populated on first deleteRow / initializeSpreadsheet.
+  // Invalidated when new sheets are created so the next call re-fetches.
+  let _sheetIdCache = null;
+
+  async function fetchSheetIds() {
+    if (_sheetIdCache) return _sheetIdCache;
+    const res  = await fetch(`${baseUrl()}?fields=sheets.properties(sheetId,title)`, { headers: authHeaders() });
+    const data = await handleResponse(res);
+    _sheetIdCache = {};
+    (data.sheets || []).forEach(s => { _sheetIdCache[s.properties.title] = s.properties.sheetId; });
+    return _sheetIdCache;
+  }
+
   /**
    * Builds the base URL for a spreadsheet.
    * @returns {string} Base URL for the configured spreadsheet.
@@ -189,10 +202,9 @@ const SheetsAPI = (() => {
       { name: CONFIG.SHEETS.DASHBOARD,         headers: [] },
     ];
 
-    // Find which tabs already exist
-    const metaRes = await fetch(`${baseUrl()}?fields=sheets.properties.title`, { headers: authHeaders() });
-    const meta = await handleResponse(metaRes);
-    const existing = new Set((meta.sheets || []).map(s => s.properties.title));
+    // Find which tabs already exist (also primes the sheetId cache)
+    const ids      = await fetchSheetIds();
+    const existing = new Set(Object.keys(ids));
 
     // Create only missing tabs
     const missing = SHEET_DEFS.filter(s => !existing.has(s.name));
@@ -203,6 +215,7 @@ const SheetsAPI = (() => {
         body: JSON.stringify({ requests: missing.map(s => ({ addSheet: { properties: { title: s.name } } })) }),
       });
       await handleResponse(res);
+      _sheetIdCache = null; // new sheets added — invalidate so next deleteRow re-fetches
     }
 
     // Write headers to all tabs (safe — only overwrites row 1)
@@ -230,14 +243,9 @@ const SheetsAPI = (() => {
    * @returns {Promise<Object>} API response body.
    */
   async function deleteRow(sheetName, rowIndex) {
-    // Fetch sheet numeric IDs (needed for deleteDimension)
-    const metaRes = await fetch(
-      `${baseUrl()}?fields=sheets.properties(sheetId,title)`,
-      { headers: authHeaders() }
-    );
-    const meta    = await handleResponse(metaRes);
-    const sheet   = (meta.sheets || []).find(s => s.properties.title === sheetName);
-    if (!sheet) throw new Error(`גיליון לא נמצא: ${sheetName}`);
+    const ids     = await fetchSheetIds();
+    const sheetId = ids[sheetName];
+    if (sheetId === undefined) throw new Error(`גיליון לא נמצא: ${sheetName}`);
 
     const res = await fetch(`${baseUrl()}:batchUpdate`, {
       method: 'POST',
@@ -246,7 +254,7 @@ const SheetsAPI = (() => {
         requests: [{
           deleteDimension: {
             range: {
-              sheetId: sheet.properties.sheetId,
+              sheetId,
               dimension: 'ROWS',
               startIndex: rowIndex,
               endIndex: rowIndex + 1,

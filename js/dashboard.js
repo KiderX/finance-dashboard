@@ -385,11 +385,13 @@ async function loadMonth(monthStr) {
   window._dashExpenses = 0;
 
   try {
-    const [incomeData, txData, allocData] = await Promise.all([
-      SheetsAPI.getSheet(CONFIG.SHEETS.INCOME),
-      SheetsAPI.getSheet(CONFIG.SHEETS.TRANSACTIONS),
-      SheetsAPI.getSheet(CONFIG.SHEETS.PROFIT_ALLOCATION),
+    // Single batchGet replaces 3 separate read calls → stays well under quota
+    const batch = await SheetsAPI.batchGet([
+      CONFIG.SHEETS.INCOME,
+      CONFIG.SHEETS.TRANSACTIONS,
+      CONFIG.SHEETS.PROFIT_ALLOCATION,
     ]);
+    const [incomeData, txData, allocData] = batch.valueRanges.map(vr => vr.values || []);
 
     _txData = txData;  // store for delete row lookups
 
