@@ -228,13 +228,50 @@ function renderExpenses(transactions) {
     (group.subGroups || []).forEach(sg => {
       const sgTotal = sg.subs.reduce((s, c) => s + (catTotals[c] || 0), 0);
       if (sgTotal === 0) return;
+
       const sgTr = document.createElement('tr');
-      sgTr.className = 'category-subgroup-header';
+      sgTr.className = 'category-subgroup-header cat-clickable';
       sgTr.innerHTML = `
-        <td style="padding-right:24px;">${escHtml(sg.name)}</td>
+        <td style="padding-right:24px;">${escHtml(sg.name)} <span class="cat-expand-icon">▸</span></td>
         <td class="${sgTotal < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(sgTotal)}</td>`;
       tbody.appendChild(sgTr);
-      sg.subs.forEach(sub => addSubRow(sub, 48));
+
+      // Sub-items start hidden; clicking the sub-group header toggles them
+      const subRows = [];
+      sg.subs.forEach(sub => {
+        shownCats.add(sub);
+        const amt = catTotals[sub] || 0;
+        if (amt === 0) return;
+        const tr = document.createElement('tr');
+        tr.className      = 'category-sub-row cat-clickable';
+        tr.dataset.cat    = sub;
+        tr.style.display  = 'none';
+        tr.innerHTML = `
+          <td style="padding-right:48px;">${escHtml(sub)} <span class="cat-expand-icon">▸</span></td>
+          <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>`;
+        tr.addEventListener('click', () => toggleCategoryDetails(sub, tr, tbody));
+        tbody.appendChild(tr);
+        subRows.push(tr);
+      });
+
+      sgTr.addEventListener('click', () => {
+        const icon   = sgTr.querySelector('.cat-expand-icon');
+        const isOpen = subRows.some(r => r.style.display !== 'none');
+        subRows.forEach(r => { r.style.display = isOpen ? 'none' : ''; });
+        if (icon) icon.textContent = isOpen ? '▸' : '▾';
+        sgTr.classList.toggle('cat-expanded', !isOpen);
+        // Collapse transaction details when closing the sub-group
+        if (isOpen) {
+          subRows.forEach(r => {
+            Array.from(tbody.querySelectorAll('.cat-detail-row'))
+              .filter(d => d.dataset.forCat === r.dataset.cat)
+              .forEach(d => d.remove());
+            r.classList.remove('cat-expanded');
+            const ri = r.querySelector('.cat-expand-icon');
+            if (ri) ri.textContent = '▸';
+          });
+        }
+      });
     });
   });
 
