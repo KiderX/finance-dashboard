@@ -1,34 +1,31 @@
 /**
- * @fileoverview Chart.js rendering helpers for the finance dashboard.
- * All charts use the fintech dark design system and Hebrew labels with ₪ formatting.
+ * @fileoverview Chart.js rendering helpers — Premium Fintech Dark v3.
+ * Violet accent (#8B5CF6), gradient bar fills, glass tooltips, ultra-subtle grid.
  */
 
 'use strict';
 
-/** Chart colour constants matching the design system */
 const CHART_COLORS = {
-  income:     '#10b981',
-  expense:    '#f43f5e',
-  accent:     '#00d4ff',
-  primary:    '#0ea5e9',
-  violet:     '#7c3aed',
-  muted:      '#64748b',
-  cardBg:     'rgba(10, 18, 35, 0.92)',
-  text:       '#f1f5f9',
-  grid:       'rgba(255, 255, 255, 0.05)',
-  allocation: ['#10b981', '#0ea5e9', '#7c3aed', '#f59e0b', '#00d4ff'],
+  income:     '#10B981',
+  expense:    '#F43F5E',
+  accent:     '#8B5CF6',
+  violet:     '#8B5CF6',
+  violetLite: '#A78BFA',
+  gold:       '#F59E0B',
+  primary:    '#8B5CF6',
+  muted:      '#64748B',
+  cardBg:     'rgba(8, 14, 28, 0.95)',
+  text:       '#F1F5F9',
+  grid:       'rgba(255, 255, 255, 0.04)',
+  allocation: ['#10B981', '#8B5CF6', '#F59E0B', '#0EA5E9', '#FB7185'],
 };
 
-/** Savings rate colour thresholds */
-const SAVINGS_THRESHOLDS = {
-  good: 20,
-  warn: 10,
-};
+const SAVINGS_THRESHOLDS = { good: 20, warn: 10 };
 
 /**
  * Formats a number as Israeli Shekel currency.
- * @param {number} value - Numeric amount.
- * @returns {string} Formatted string like ₪1,234.56
+ * @param {number} value
+ * @returns {string}
  */
 function formatShekel(value) {
   return (
@@ -42,28 +39,58 @@ function formatShekel(value) {
 
 /**
  * Returns the colour for a savings rate percentage.
- * @param {number} rate - Savings rate as a percentage (0–100).
- * @returns {string} CSS colour string.
+ * @param {number} rate
+ * @returns {string}
  */
 function savingsRateColor(rate) {
   if (rate >= SAVINGS_THRESHOLDS.good) return CHART_COLORS.income;
-  if (rate >= SAVINGS_THRESHOLDS.warn) return '#f59e0b';
+  if (rate >= SAVINGS_THRESHOLDS.warn) return CHART_COLORS.gold;
   return CHART_COLORS.expense;
 }
 
 /**
- * Shared default options for all charts.
- * @returns {Object} Chart.js options object.
+ * Creates a vertical linear gradient for area fills and bar charts.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Object} chartArea - Chart.js chartArea object
+ * @param {string} hexColor - Base hex color (e.g. '#10B981')
+ * @param {number} [topAlpha=0.9] - Opacity at top
+ * @param {number} [bottomAlpha=0.45] - Opacity at bottom
+ * @returns {CanvasGradient}
+ */
+function makeGradient(ctx, chartArea, hexColor, topAlpha = 0.9, bottomAlpha = 0.45) {
+  const r = parseInt(hexColor.slice(1, 3), 16);
+  const g = parseInt(hexColor.slice(3, 5), 16);
+  const b = parseInt(hexColor.slice(5, 7), 16);
+  const grad = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+  grad.addColorStop(0,   `rgba(${r},${g},${b},${topAlpha})`);
+  grad.addColorStop(1,   `rgba(${r},${g},${b},${bottomAlpha})`);
+  return grad;
+}
+
+/**
+ * Creates a gradient for area (fill) under line charts.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Object} chartArea
+ * @param {string} hexColor
+ * @returns {CanvasGradient}
+ */
+function makeAreaGradient(ctx, chartArea, hexColor) {
+  return makeGradient(ctx, chartArea, hexColor, 0.25, 0);
+}
+
+/**
+ * Shared default Chart.js options (glass tooltip, subtle grid, Heebo font).
+ * @returns {Object}
  */
 function defaultOptions() {
   return {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 600, easing: 'easeOutQuart' },
+    animation: { duration: 550, easing: 'easeOutQuart' },
     plugins: {
       legend: {
         labels: {
-          color: CHART_COLORS.text,
+          color: CHART_COLORS.muted,
           font: { family: 'Heebo', size: 12, weight: '500' },
           padding: 16,
           usePointStyle: true,
@@ -73,13 +100,13 @@ function defaultOptions() {
       tooltip: {
         backgroundColor: CHART_COLORS.cardBg,
         titleColor: CHART_COLORS.text,
-        bodyColor: '#94a3b8',
-        borderColor: 'rgba(255, 255, 255, 0.08)',
+        bodyColor:  '#94A3B8',
+        borderColor: 'rgba(139, 92, 246, 0.28)',
         borderWidth: 1,
-        padding: 12,
-        cornerRadius: 10,
+        padding: 13,
+        cornerRadius: 14,
         titleFont: { family: 'Heebo', weight: 'bold', size: 13 },
-        bodyFont: { family: 'Heebo', size: 12 },
+        bodyFont:  { family: 'Heebo', size: 12 },
         displayColors: true,
         boxPadding: 4,
       },
@@ -88,54 +115,26 @@ function defaultOptions() {
 }
 
 /**
- * Shared scale configuration for x and y axes.
- * @param {Function} [yFormatter] - Optional tick formatter for the y-axis.
- * @returns {Object} Chart.js scales config.
+ * Shared axis configuration.
+ * @param {Function} [yCallback] - Y-axis tick formatter.
+ * @returns {Object}
  */
-function defaultScales(yFormatter) {
-  const axisStyle = {
-    ticks: { color: CHART_COLORS.muted, font: { family: 'Heebo', size: 11 } },
-    grid:  { color: CHART_COLORS.grid },
+function defaultScales(yCallback) {
+  const base = {
+    ticks:  { color: CHART_COLORS.muted, font: { family: 'Heebo', size: 11 } },
+    grid:   { color: CHART_COLORS.grid },
     border: { display: false },
   };
-
-  const scales = {
-    x: { ...axisStyle },
-    y: {
-      ...axisStyle,
-      ticks: {
-        ...axisStyle.ticks,
-        callback: yFormatter || ((v) => v),
-      },
-    },
+  return {
+    x: { ...base },
+    y: { ...base, ticks: { ...base.ticks, callback: yCallback || ((v) => v) } },
   };
-
-  return scales;
 }
 
 /**
- * Creates a vertical gradient fill for line charts.
- * @param {CanvasRenderingContext2D} ctx - Canvas context.
- * @param {string} colorHex - Top color (rgba start).
- * @param {number} [height=200] - Gradient height in px.
- * @returns {CanvasGradient}
- */
-function makeGradient(ctx, colorHex, height = 200) {
-  const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  // Convert hex to rgb for rgba
-  const r = parseInt(colorHex.slice(1, 3), 16);
-  const g = parseInt(colorHex.slice(3, 5), 16);
-  const b = parseInt(colorHex.slice(5, 7), 16);
-  gradient.addColorStop(0,   `rgba(${r},${g},${b},0.22)`);
-  gradient.addColorStop(0.6, `rgba(${r},${g},${b},0.06)`);
-  gradient.addColorStop(1,   `rgba(${r},${g},${b},0)`);
-  return gradient;
-}
-
-/**
- * Destroys an existing Chart instance on a canvas (if any) before creating a new one.
- * @param {string} canvasId - The id of the <canvas> element.
- * @returns {HTMLCanvasElement} The canvas element.
+ * Destroys any existing Chart on a canvas before creating a new one.
+ * @param {string} canvasId
+ * @returns {HTMLCanvasElement}
  */
 function prepareCanvas(canvasId) {
   const canvas = document.getElementById(canvasId);
@@ -147,18 +146,20 @@ function prepareCanvas(canvasId) {
 
 /**
  * Renders a grouped bar chart comparing income and expenses.
- * @param {string} canvasId - Target <canvas> element id.
- * @param {string[]} months - Array of month labels (MM/YYYY).
- * @param {number[]} incomeData - Income totals per month.
- * @param {number[]} expenseData - Expense totals per month.
- * @returns {Chart} The created Chart.js instance.
+ * Bars use canvas gradient fills (light → mid shade, top → bottom).
+ * @param {string} canvasId
+ * @param {string[]} months
+ * @param {number[]} incomeData
+ * @param {number[]} expenseData
+ * @returns {Chart}
  */
 function renderIncomeExpensesBar(canvasId, months, incomeData, expenseData) {
   const canvas = prepareCanvas(canvasId);
+  const ctx    = canvas.getContext('2d');
   const opts   = defaultOptions();
   opts.scales  = defaultScales((v) => formatShekel(v));
   opts.plugins.tooltip.callbacks = {
-    label: (ctx) => `${ctx.dataset.label}: ${formatShekel(ctx.parsed.y)}`,
+    label: (c) => `${c.dataset.label}: ${formatShekel(c.parsed.y)}`,
   };
 
   return new Chart(canvas, {
@@ -169,15 +170,23 @@ function renderIncomeExpensesBar(canvasId, months, incomeData, expenseData) {
         {
           label: 'הכנסות',
           data: incomeData,
-          backgroundColor: CHART_COLORS.income,
-          borderRadius: 8,
+          backgroundColor: (context) => {
+            const { chartArea } = context.chart;
+            if (!chartArea) return CHART_COLORS.income;
+            return makeGradient(ctx, chartArea, '#10B981', 0.88, 0.5);
+          },
+          borderRadius: 10,
           borderSkipped: false,
         },
         {
           label: 'הוצאות',
           data: expenseData,
-          backgroundColor: CHART_COLORS.expense,
-          borderRadius: 8,
+          backgroundColor: (context) => {
+            const { chartArea } = context.chart;
+            if (!chartArea) return CHART_COLORS.expense;
+            return makeGradient(ctx, chartArea, '#F43F5E', 0.88, 0.5);
+          },
+          borderRadius: 10,
           borderSkipped: false,
         },
       ],
@@ -187,17 +196,17 @@ function renderIncomeExpensesBar(canvasId, months, incomeData, expenseData) {
 }
 
 /**
- * Renders a donut chart for profit allocation breakdown.
- * @param {string} canvasId - Target <canvas> element id.
- * @param {string[]} labels - Allocation category labels.
- * @param {number[]} data - Amounts per category.
- * @returns {Chart} The created Chart.js instance.
+ * Renders a donut chart for expense category or profit allocation breakdown.
+ * @param {string} canvasId
+ * @param {string[]} labels
+ * @param {number[]} data
+ * @returns {Chart}
  */
 function renderCategoryDonut(canvasId, labels, data) {
   const canvas = prepareCanvas(canvasId);
   const opts   = defaultOptions();
   opts.plugins.tooltip.callbacks = {
-    label: (ctx) => `${ctx.label}: ${formatShekel(ctx.parsed)}`,
+    label: (c) => `${c.label}: ${formatShekel(c.parsed)}`,
   };
   opts.cutout = '62%';
 
@@ -209,7 +218,7 @@ function renderCategoryDonut(canvasId, labels, data) {
         {
           data,
           backgroundColor: CHART_COLORS.allocation,
-          borderColor: 'rgba(3, 7, 18, 0.8)',
+          borderColor: 'rgba(5, 11, 24, 0.9)',
           borderWidth: 3,
           hoverOffset: 6,
         },
@@ -221,26 +230,24 @@ function renderCategoryDonut(canvasId, labels, data) {
 
 /**
  * Renders a line chart showing savings rate per month.
- * Points are colour-coded: green (>20%), yellow (10-20%), red (<10%).
- * @param {string} canvasId - Target <canvas> element id.
- * @param {string[]} months - Month labels.
- * @param {number[]} rates - Savings rate percentages (0–100).
- * @returns {Chart} The created Chart.js instance.
+ * Points are colour-coded: green >20%, gold 10–20%, rose <10%.
+ * @param {string} canvasId
+ * @param {string[]} months
+ * @param {number[]} rates
+ * @returns {Chart}
  */
 function renderSavingsRateLine(canvasId, months, rates) {
   const canvas = prepareCanvas(canvasId);
   const ctx    = canvas.getContext('2d');
   const opts   = defaultOptions();
-
-  opts.scales = defaultScales((v) => `${v}%`);
+  opts.scales  = defaultScales((v) => `${v}%`);
   opts.scales.y.min = 0;
   opts.scales.y.max = 100;
   opts.plugins.tooltip.callbacks = {
-    label: (ctx) => `חיסכון: ${ctx.parsed.y.toFixed(1)}%`,
+    label: (c) => `חיסכון: ${c.parsed.y.toFixed(1)}%`,
   };
 
-  const pointColors = rates.map((r) => savingsRateColor(r));
-  const gradient    = makeGradient(ctx, '#00d4ff', 260);
+  const pointColors = rates.map(savingsRateColor);
 
   return new Chart(canvas, {
     type: 'line',
@@ -250,10 +257,14 @@ function renderSavingsRateLine(canvasId, months, rates) {
         {
           label: 'אחוז חיסכון',
           data: rates,
-          borderColor: CHART_COLORS.accent,
-          backgroundColor: gradient,
+          borderColor: CHART_COLORS.violet,
+          backgroundColor: (context) => {
+            const { chartArea } = context.chart;
+            if (!chartArea) return 'rgba(139,92,246,0.15)';
+            return makeAreaGradient(ctx, chartArea, '#8B5CF6');
+          },
           pointBackgroundColor: pointColors,
-          pointBorderColor: '#030712',
+          pointBorderColor: '#050B18',
           pointBorderWidth: 2,
           pointRadius: 5,
           pointHoverRadius: 7,
@@ -268,22 +279,19 @@ function renderSavingsRateLine(canvasId, months, rates) {
 
 /**
  * Renders a line chart showing total net worth over time.
- * @param {string} canvasId - Target <canvas> element id.
- * @param {string[]} months - Month labels.
- * @param {number[]} values - Net worth totals per month.
- * @returns {Chart} The created Chart.js instance.
+ * @param {string} canvasId
+ * @param {string[]} months
+ * @param {number[]} values
+ * @returns {Chart}
  */
 function renderNetWorthLine(canvasId, months, values) {
   const canvas = prepareCanvas(canvasId);
   const ctx    = canvas.getContext('2d');
   const opts   = defaultOptions();
-
-  opts.scales = defaultScales((v) => formatShekel(v));
+  opts.scales  = defaultScales((v) => formatShekel(v));
   opts.plugins.tooltip.callbacks = {
-    label: (ctx) => `שווי נקי: ${formatShekel(ctx.parsed.y)}`,
+    label: (c) => `שווי נקי: ${formatShekel(c.parsed.y)}`,
   };
-
-  const gradient = makeGradient(ctx, '#10b981', 340);
 
   return new Chart(canvas, {
     type: 'line',
@@ -294,9 +302,13 @@ function renderNetWorthLine(canvasId, months, values) {
           label: 'שווי נקי כולל',
           data: values,
           borderColor: CHART_COLORS.income,
-          backgroundColor: gradient,
+          backgroundColor: (context) => {
+            const { chartArea } = context.chart;
+            if (!chartArea) return 'rgba(16,185,129,0.15)';
+            return makeAreaGradient(ctx, chartArea, '#10B981');
+          },
           pointBackgroundColor: CHART_COLORS.income,
-          pointBorderColor: '#030712',
+          pointBorderColor: '#050B18',
           pointBorderWidth: 2,
           pointRadius: 5,
           pointHoverRadius: 7,
@@ -311,18 +323,18 @@ function renderNetWorthLine(canvasId, months, values) {
 
 /**
  * Renders a bar chart of ESPP net income by sale date.
- * @param {string} canvasId - Target <canvas> element id.
- * @param {string[]} dates - Sale date labels.
- * @param {number[]} amounts - Net amounts per sale.
- * @returns {Chart} The created Chart.js instance.
+ * @param {string} canvasId
+ * @param {string[]} dates
+ * @param {number[]} amounts
+ * @returns {Chart}
  */
 function renderESPPBar(canvasId, dates, amounts) {
   const canvas = prepareCanvas(canvasId);
+  const ctx    = canvas.getContext('2d');
   const opts   = defaultOptions();
-
-  opts.scales = defaultScales((v) => formatShekel(v));
+  opts.scales  = defaultScales((v) => formatShekel(v));
   opts.plugins.tooltip.callbacks = {
-    label: (ctx) => `סכום נטו: ${formatShekel(ctx.parsed.y)}`,
+    label: (c) => `סכום נטו: ${formatShekel(c.parsed.y)}`,
   };
 
   return new Chart(canvas, {
@@ -333,8 +345,12 @@ function renderESPPBar(canvasId, dates, amounts) {
         {
           label: 'ESPP נטו',
           data: amounts,
-          backgroundColor: CHART_COLORS.accent,
-          borderRadius: 8,
+          backgroundColor: (context) => {
+            const { chartArea } = context.chart;
+            if (!chartArea) return CHART_COLORS.gold;
+            return makeGradient(ctx, chartArea, '#F59E0B', 0.9, 0.5);
+          },
+          borderRadius: 10,
           borderSkipped: false,
         },
       ],
@@ -345,22 +361,21 @@ function renderESPPBar(canvasId, dates, amounts) {
 
 /**
  * Renders a stacked area chart for net worth breakdown by asset type.
- * @param {string} canvasId - Target <canvas> element id.
- * @param {string[]} months - Month labels.
- * @param {number[]} portfolio - Portfolio values per month.
- * @param {number[]} cashFund - Cash fund values per month.
- * @param {number[]} savings - Savings values per month.
- * @returns {Chart} The created Chart.js instance.
+ * @param {string} canvasId
+ * @param {string[]} months
+ * @param {number[]} portfolio
+ * @param {number[]} cashFund
+ * @param {number[]} savings
+ * @returns {Chart}
  */
 function renderNetWorthStackedArea(canvasId, months, portfolio, cashFund, savings) {
   const canvas = prepareCanvas(canvasId);
   const opts   = defaultOptions();
-
-  opts.scales = defaultScales((v) => formatShekel(v));
+  opts.scales  = defaultScales((v) => formatShekel(v));
   opts.scales.x.stacked = true;
   opts.scales.y.stacked = true;
   opts.plugins.tooltip.callbacks = {
-    label: (ctx) => `${ctx.dataset.label}: ${formatShekel(ctx.parsed.y)}`,
+    label: (c) => `${c.dataset.label}: ${formatShekel(c.parsed.y)}`,
   };
 
   return new Chart(canvas, {
@@ -371,29 +386,23 @@ function renderNetWorthStackedArea(canvasId, months, portfolio, cashFund, saving
         {
           label: 'תיק השקעות',
           data: portfolio,
-          backgroundColor: 'rgba(14, 165, 233, 0.5)',
-          borderColor: CHART_COLORS.primary,
-          fill: true,
-          tension: 0.4,
-          pointRadius: 3,
+          backgroundColor: 'rgba(14, 165, 233, 0.45)',
+          borderColor: '#0EA5E9',
+          fill: true, tension: 0.4, pointRadius: 3,
         },
         {
           label: 'קרן כספית',
           data: cashFund,
-          backgroundColor: 'rgba(16, 185, 129, 0.5)',
+          backgroundColor: 'rgba(16, 185, 129, 0.45)',
           borderColor: CHART_COLORS.income,
-          fill: true,
-          tension: 0.4,
-          pointRadius: 3,
+          fill: true, tension: 0.4, pointRadius: 3,
         },
         {
           label: 'חסכונות',
           data: savings,
-          backgroundColor: 'rgba(124, 58, 237, 0.5)',
+          backgroundColor: 'rgba(139, 92, 246, 0.45)',
           borderColor: CHART_COLORS.violet,
-          fill: true,
-          tension: 0.4,
-          pointRadius: 3,
+          fill: true, tension: 0.4, pointRadius: 3,
         },
       ],
     },
