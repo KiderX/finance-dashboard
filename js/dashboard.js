@@ -1,7 +1,8 @@
 'use strict';
 
 let currentMonth = '';
-let _txData = [];  // full transactions sheet data — used for row-index lookups when deleting
+let _txData = [];               // full sheet data — for row-index lookups on delete
+let _currentTransactions = [];  // filtered to current month — for click-to-expand
 
 const HEBREW_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
@@ -133,19 +134,59 @@ async function saveIncome(allIncomeData) {
   }
 }
 
+// ── Category normalization (shared by expenses + transactions table) ──
+function normalizeCategory(merchant, rawCat) {
+  let cat = CONFIG.LEGACY_CATEGORY_MAP[rawCat] || rawCat;
+  for (const [pattern, mappedCat] of CONFIG.MERCHANT_CATEGORY_MAP) {
+    if ((merchant || '').includes(pattern)) { cat = mappedCat; break; }
+  }
+  return cat;
+}
+
+// ── Click-to-expand: show transactions under a sub-category row ───────
+function toggleCategoryDetails(catName, triggerTr, tbody) {
+  const existing = Array.from(tbody.querySelectorAll('.cat-detail-row'))
+    .filter(r => r.dataset.forCat === catName);
+  const icon = triggerTr.querySelector('.cat-expand-icon');
+  if (existing.length > 0) {
+    existing.forEach(r => r.remove());
+    triggerTr.classList.remove('cat-expanded');
+    if (icon) icon.textContent = '▸';
+    return;
+  }
+  triggerTr.classList.add('cat-expanded');
+  if (icon) icon.textContent = '▾';
+
+  const txns = _currentTransactions
+    .filter(row => normalizeCategory(row[1], row[3]) === catName)
+    .sort((a, b) => {
+      const p = d => { const [dd,mm,yyyy] = (d||'').split('/'); return new Date(yyyy, mm-1, dd); };
+      return p(b[0]) - p(a[0]);
+    });
+
+  let afterEl = triggerTr;
+  txns.forEach(row => {
+    const [date, merchant, amount] = row;
+    const amt = parseFloat(amount || 0);
+    const tr  = document.createElement('tr');
+    tr.className      = 'cat-detail-row';
+    tr.dataset.forCat = catName;
+    tr.innerHTML = `
+      <td class="cat-detail-cell">└ ${escHtml(merchant||'')} <span class="cat-detail-date">${escHtml(date||'')}</span></td>
+      <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'} cat-detail-amount">${formatShekel(amt)}</td>`;
+    afterEl.after(tr);
+    afterEl = tr;
+  });
+}
+
 // ── Render expenses by category ───────────────────────────
 function renderExpenses(transactions) {
+  _currentTransactions = transactions;
+
   const catTotals = {};
   transactions.forEach(row => {
-    const merchant = row[1] || '';
-    const amount   = parseFloat(row[2] || 0);
-    const rawCat   = row[3] || 'שונות';
-    let cat = CONFIG.LEGACY_CATEGORY_MAP[rawCat] || rawCat;
-    // Merchant-name override: unambiguous payees always win over stored category
-    for (const [pattern, mappedCat] of CONFIG.MERCHANT_CATEGORY_MAP) {
-      if (merchant.includes(pattern)) { cat = mappedCat; break; }
-    }
-    catTotals[cat] = (catTotals[cat] || 0) + amount;
+    const cat = normalizeCategory(row[1], row[3]);
+    catTotals[cat] = (catTotals[cat] || 0) + parseFloat(row[2] || 0);
   });
 
   const tbody = document.getElementById('expenses-table-body');
@@ -153,9 +194,25 @@ function renderExpenses(transactions) {
   let grandTotal = 0;
   const shownCats = new Set();
 
-  // Render each parent group as a bold header followed by indented sub-category rows
+  function addSubRow(sub, paddingRight) {
+    shownCats.add(sub);
+    const amt = catTotals[sub] || 0;
+    if (amt === 0) return;
+    const tr = document.createElement('tr');
+    tr.className = 'category-sub-row cat-clickable';
+    tr.dataset.cat = sub;
+    tr.innerHTML = `
+      <td style="padding-right:${paddingRight}px;">${escHtml(sub)} <span class="cat-expand-icon">▸</span></td>
+      <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>`;
+    tr.addEventListener('click', () => toggleCategoryDetails(sub, tr, tbody));
+    tbody.appendChild(tr);
+  }
+
   CONFIG.CATEGORY_GROUPS.forEach(group => {
-    const groupTotal = group.subs.reduce((sum, sub) => sum + (catTotals[sub] || 0), 0);
+    const directTotal   = group.subs.reduce((s, c) => s + (catTotals[c] || 0), 0);
+    const subGroupTotal = (group.subGroups || []).reduce((s, sg) =>
+      s + sg.subs.reduce((s2, c) => s2 + (catTotals[c] || 0), 0), 0);
+    const groupTotal = directTotal + subGroupTotal;
     if (groupTotal === 0) return;
     grandTotal += groupTotal;
 
@@ -166,20 +223,22 @@ function renderExpenses(transactions) {
       <td class="${groupTotal < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(groupTotal)}</td>`;
     tbody.appendChild(headerTr);
 
-    group.subs.forEach(sub => {
-      shownCats.add(sub);
-      const amt = catTotals[sub] || 0;
-      if (amt === 0) return;
-      const tr = document.createElement('tr');
-      tr.className = 'category-sub-row';
-      tr.innerHTML = `
-        <td>${escHtml(sub)}</td>
-        <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>`;
-      tbody.appendChild(tr);
+    group.subs.forEach(sub => addSubRow(sub, 24));
+
+    (group.subGroups || []).forEach(sg => {
+      const sgTotal = sg.subs.reduce((s, c) => s + (catTotals[c] || 0), 0);
+      if (sgTotal === 0) return;
+      const sgTr = document.createElement('tr');
+      sgTr.className = 'category-subgroup-header';
+      sgTr.innerHTML = `
+        <td style="padding-right:24px;">${escHtml(sg.name)}</td>
+        <td class="${sgTotal < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(sgTotal)}</td>`;
+      tbody.appendChild(sgTr);
+      sg.subs.forEach(sub => addSubRow(sub, 48));
     });
   });
 
-  // Legacy / ungrouped categories from existing sheet data
+  // Legacy / ungrouped categories not covered by any group
   Object.keys(catTotals).forEach(cat => {
     if (shownCats.has(cat) || catTotals[cat] === 0) return;
     const amt = catTotals[cat];
@@ -192,10 +251,9 @@ function renderExpenses(transactions) {
   });
 
   document.getElementById('expenses-total-cell').textContent = formatShekel(grandTotal);
-  document.getElementById('stat-expenses').textContent = formatShekel(grandTotal);
+  document.getElementById('stat-expenses').textContent       = formatShekel(grandTotal);
   window._dashExpenses = grandTotal;
   updateProfitStats();
-
   renderIncomeExpensesBar('income-expense-chart', [currentMonth], [window._dashIncome || 0], [grandTotal]);
 }
 
@@ -239,12 +297,8 @@ function renderTransactions(transactions) {
 
   transactions.forEach(row => {
     const [date, merchant, amount, rawCategory, type, notes, , , , hash] = row;
-    const amt = parseFloat(amount || 0);
-    // Normalize category for display — same logic as renderExpenses
-    let category = CONFIG.LEGACY_CATEGORY_MAP[rawCategory] || rawCategory;
-    for (const [pattern, mappedCat] of CONFIG.MERCHANT_CATEGORY_MAP) {
-      if ((merchant || '').includes(pattern)) { category = mappedCat; break; }
-    }
+    const amt      = parseFloat(amount || 0);
+    const category = normalizeCategory(merchant, rawCategory);
     // Find the row's 0-based index in the full sheet data (including header row at index 0)
     const fullIdx = _txData.findIndex((r, i) => i > 0 && r[9] === hash);
     const tr = document.createElement('tr');

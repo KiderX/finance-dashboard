@@ -118,8 +118,16 @@ tbody td { padding: 10px 14px; text-align: right; vertical-align: middle; }
 .amount-negative { color: var(--danger); font-weight: 600; }
 .total-row td { font-weight: 700; background: rgba(26,82,118,0.2); border-top: 2px solid var(--border); }
 .category-group-header td { font-weight: 700; background: rgba(26,82,118,0.12); padding-top: 14px; border-top: 1px solid var(--border); }
-.category-sub-row td:first-child { padding-right: 24px; color: var(--text-muted); font-size: 0.88rem; }
-.category-sub-row td:last-child { font-size: 0.88rem; }
+.category-subgroup-header td { font-weight: 600; font-size: 0.88rem; color: var(--text-muted); background: rgba(26,82,118,0.05); }
+.category-sub-row td { font-size: 0.88rem; }
+.cat-clickable { cursor: pointer; user-select: none; }
+.cat-clickable:hover td { background: rgba(255,255,255,0.05); }
+.cat-clickable.cat-expanded td { color: var(--secondary); }
+.cat-expand-icon { font-size: 0.65rem; opacity: 0.5; margin-right: 4px; display: inline-block; }
+.cat-detail-row td { padding-top: 5px !important; padding-bottom: 5px !important; background: rgba(0,0,0,0.15); border-bottom: none !important; }
+.cat-detail-cell { padding-right: 40px !important; font-size: 0.8rem; color: var(--text-muted); }
+.cat-detail-date { opacity: 0.6; font-size: 0.76rem; margin-right: 6px; }
+.cat-detail-amount { font-size: 0.82rem; }
 
 /* ── Buttons ── */
 .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: none; border-radius: 8px; font-family: 'Heebo', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all var(--transition); white-space: nowrap; }
