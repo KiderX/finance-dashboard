@@ -19,6 +19,11 @@ function generateHash(date, merchant, amount) {
   catch (_) { return btoa(str); }
 }
 
+// Strip invisible Unicode direction/BOM marks that Israeli bank exports embed in Hebrew text
+function stripMarks(s) {
+  return String(s).replace(/[‎‏‪-‮﻿ ]/g, '').trim();
+}
+
 // ── Cal normalization ─────────────────────────────────────
 const CAL_CATEGORY_MAP = {
   'אופנה':             'בגדים ואופנה',
@@ -70,11 +75,21 @@ function parseCalAmount(val) {
   return isNaN(n) ? null : n;
 }
 
-// Scan first rows for a Cal header line (needs both date and amount columns)
+// Scan first rows for a Cal header line. Uses stripMarks to handle invisible Unicode
+// direction markers that Israeli banks embed in Hebrew text.
 function findCalHeaderRow(rows) {
-  for (let i = 0; i < Math.min(rows.length, 15); i++) {
-    const joined = rows[i].map(c => String(c)).join(' ');
+  const limit = Math.min(rows.length, 30);
+  // Primary: row containing תאריך AND (סכום OR ענף)
+  for (let i = 0; i < limit; i++) {
+    const joined = rows[i].map(c => stripMarks(String(c))).join(' ');
     if (joined.includes('תאריך') && (joined.includes('סכום') || joined.includes('ענף'))) {
+      return i;
+    }
+  }
+  // Fallback: row containing תאריך AND שם — catches variant header formats
+  for (let i = 0; i < limit; i++) {
+    const joined = rows[i].map(c => stripMarks(String(c))).join(' ');
+    if (joined.includes('תאריך') && joined.includes('שם')) {
       return i;
     }
   }
@@ -82,14 +97,17 @@ function findCalHeaderRow(rows) {
 }
 
 function isCalFormat(headers) {
-  return headers.some(h => h.includes('ענף') || h.includes('תאריך עסקה'));
+  const clean = headers.map(h => stripMarks(h));
+  return clean.some(h => h.includes('ענף') || h.includes('תאריך עסקה') || h.includes('תאריך')) &&
+         clean.some(h => h.includes('סכום') || h.includes('שם בית'));
 }
 
 // Transform a raw 2D Cal sheet into normalized row objects ready for preview/upload
 function normalizeCal2D(data2d, headerIdx, sourceName) {
   const rawHeaders = data2d[headerIdx].map(h =>
-    String(h).replace(/^﻿/, '').replace(/\n/g, ' ').trim()
+    stripMarks(String(h)).replace(/\n/g, ' ')
   );
+  console.log('[Cal] headers for', sourceName, ':', rawHeaders);
 
   function colIdx(...candidates) {
     for (const cand of candidates) {
@@ -100,13 +118,18 @@ function normalizeCal2D(data2d, headerIdx, sourceName) {
   }
 
   const dateIdx     = colIdx('תאריך עסקה', 'תאריך');
-  const merchantIdx = colIdx('שם בית עסק', 'בית עסק');
-  const amountIdx   = colIdx('סכום חיוב');
+  const merchantIdx = colIdx('שם בית עסק', 'בית עסק', 'שם');
+  const amountIdx   = colIdx('סכום חיוב', 'חיוב');
   const typeIdx     = colIdx('סוג עסקה', 'סוג');
   const branchIdx   = colIdx('ענף');
   const notesIdx    = colIdx('הערות');
 
-  if (dateIdx === -1 || merchantIdx === -1 || amountIdx === -1) return [];
+  console.log('[Cal] colIdx →', { dateIdx, merchantIdx, amountIdx, typeIdx, branchIdx, notesIdx });
+
+  if (dateIdx === -1 || merchantIdx === -1 || amountIdx === -1) {
+    console.warn('[Cal] Missing required column(s) — skipping sheet', sourceName);
+    return [];
+  }
 
   const rows = [];
   for (let i = headerIdx + 1; i < data2d.length; i++) {
@@ -225,17 +248,45 @@ async function processExcelFile(file) {
   const buffer = await file.arrayBuffer();
   const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
 
+  console.log('[Cal] Sheet names:', wb.SheetNames);
+
   const allRows = [];
+  const diag    = [];
+
   for (const sheetName of wb.SheetNames) {
     const ws = wb.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true });
-    const strData = data.map(r => r.map(c => String(c === null || c === undefined ? '' : c)));
+
+    // Build string version for header detection (strip marks, convert dates to ISO)
+    const strData = data.map(r => r.map(c => {
+      if (c instanceof Date) return c.toISOString();
+      return stripMarks(String(c === null || c === undefined ? '' : c));
+    }));
+
+    // Log the first 6 rows so the console shows the raw structure
+    console.log(`[Cal] "${sheetName}" — ${data.length} rows. First 6:`);
+    data.slice(0, 6).forEach((row, i) =>
+      console.log(`  [${i}]`, row.map(c => c instanceof Date ? c.toISOString() : c))
+    );
+
     const headerIdx = findCalHeaderRow(strData);
+    console.log(`[Cal] "${sheetName}" header row index:`, headerIdx);
+    diag.push(`${sheetName}:${data.length}r/h@${headerIdx}`);
+
     if (headerIdx === -1) continue;
 
     const rows = normalizeCal2D(data, headerIdx, sheetName);
+    console.log(`[Cal] "${sheetName}" → ${rows.length} transactions`);
     allRows.push(...rows);
   }
+
+  if (allRows.length === 0) {
+    throw new Error(
+      `לא נמצאו עסקאות בקובץ. פירוט: ${diag.join(' | ')}. ` +
+      `פתח את קונסול הדפדפן (F12 ← Console) ושלח את הפלט.`
+    );
+  }
+
   return allRows;
 }
 
