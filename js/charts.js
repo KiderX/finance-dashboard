@@ -200,33 +200,54 @@ function renderIncomeExpensesBar(canvasId, months, incomeData, expenseData) {
 }
 
 /**
+ * Injects an HTML legend with glowing dots, category names, and percentages
+ * into the given container element.
+ * @param {HTMLElement|null} container
+ * @param {string[]} labels
+ * @param {number[]} data
+ * @param {string[]} colors
+ */
+function buildDonutLegend(container, labels, data, colors) {
+  if (!container) return;
+  const total = data.reduce((a, b) => a + b, 0);
+  container.innerHTML = labels.map((lbl, i) => {
+    const color = colors[i % colors.length];
+    const pct   = total > 0 ? Math.round((data[i] / total) * 100) + '%' : '0%';
+    return `
+      <div class="donut-legend-item">
+        <span class="donut-legend-dot" style="background:${color};box-shadow:0 0 6px 3px ${color}99;"></span>
+        <span class="donut-legend-name">${lbl}</span>
+        <span class="donut-legend-pct">${pct}</span>
+      </div>`;
+  }).join('');
+}
+
+/**
  * Renders a donut chart for expense category or profit allocation breakdown.
  * Thin seamless ring with per-segment colored glow and center hover label.
+ * Tooltip is disabled — hovered segment shows its name + amount inside the ring.
  * @param {string} canvasId
  * @param {string[]} labels
  * @param {number[]} data
+ * @param {string} [legendContainerId] - ID of element to inject the side legend into
  * @returns {Chart}
  */
-function renderCategoryDonut(canvasId, labels, data) {
+function renderCategoryDonut(canvasId, labels, data, legendContainerId) {
   const canvas = prepareCanvas(canvasId);
   const opts   = defaultOptions();
-  opts.plugins.tooltip.callbacks = {
-    label: (c) => `${c.label}: ${formatShekel(c.parsed)}`,
-  };
+  opts.plugins.tooltip.enabled = false;  // center text replaces tooltip popup
+  opts.plugins.legend.display  = false;  // custom HTML legend replaces Chart.js legend
   opts.cutout    = '76%';
   opts.layout    = { padding: 12 };
   opts.animation = { duration: 800, easing: 'easeOutCubic' };
 
-  /*
-   * Re-draws every arc with a canvas shadow in the arc's own color.
-   * shadowBlur 14 = subtle glow (reference-style charts use 24-30; this is ~half).
-   */
+  /* Re-draws every arc with a canvas shadow in the arc's own color. */
   const arcGlow = {
     id: 'arcGlow',
     afterDatasetsDraw(chart) {
-      const { ctx }  = chart;
-      const meta     = chart.getDatasetMeta(0);
-      const colors   = chart.data.datasets[0].backgroundColor;
+      const { ctx } = chart;
+      const meta    = chart.getDatasetMeta(0);
+      const colors  = chart.data.datasets[0].backgroundColor;
       ctx.save();
       meta.data.forEach((arc, i) => {
         const color = Array.isArray(colors) ? colors[i % colors.length] : colors;
@@ -238,7 +259,7 @@ function renderCategoryDonut(canvasId, labels, data) {
     },
   };
 
-  /* Draws hovered segment's label + amount in the center hole */
+  /* Shows hovered segment's name + amount inside the center hole (no popup). */
   const centerLabel = {
     id: 'donutCenter',
     afterDraw(chart) {
@@ -263,7 +284,7 @@ function renderCategoryDonut(canvasId, labels, data) {
     },
   };
 
-  return new Chart(canvas, {
+  const chart = new Chart(canvas, {
     type: 'doughnut',
     data: {
       labels,
@@ -280,6 +301,15 @@ function renderCategoryDonut(canvasId, labels, data) {
     options: opts,
     plugins: [arcGlow, centerLabel],
   });
+
+  if (legendContainerId) {
+    buildDonutLegend(
+      document.getElementById(legendContainerId),
+      labels, data, CHART_COLORS.allocation
+    );
+  }
+
+  return chart;
 }
 
 /**

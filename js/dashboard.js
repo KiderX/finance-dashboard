@@ -331,7 +331,7 @@ function renderExpenses(transactions) {
     if (total > 0) { donutLabels.push(group.name); donutValues.push(total); }
   });
   if (donutLabels.length && typeof renderCategoryDonut === 'function') {
-    renderCategoryDonut('category-donut-chart', donutLabels, donutValues);
+    renderCategoryDonut('category-donut-chart', donutLabels, donutValues, 'category-donut-legend');
   }
 }
 

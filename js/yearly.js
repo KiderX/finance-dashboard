@@ -267,7 +267,7 @@ async function loadYearly() {
     renderYearlySummaryTable(months, incomeArr, expenseArr, profitArr, rateArr);
     renderIncomeExpensesBar('yearly-income-expense-chart', MONTH_NAMES, incomeArr, expenseArr);
     renderSavingsRateLine('savings-rate-chart', MONTH_NAMES, rateArr);
-    renderCategoryDonut('allocation-donut-chart', ['עו"ש', 'קרן כספית', 'השקעות', 'אחר'], allocTotals);
+    renderCategoryDonut('allocation-donut-chart', ['עו"ש', 'קרן כספית', 'השקעות', 'אחר'], allocTotals, 'allocation-donut-legend');
     renderYoYTable(incomeArr, expenseArr, prevIncomeArr, prevExpenseArr);
     detectRecurring(txData, currentYear);
     renderESPPSummary(esppData, currentYear);
