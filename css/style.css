@@ -1660,3 +1660,13 @@ body.sidebar-collapsed-mode .sidebar-footer .btn:not(#settings-btn):not(#theme-t
     justify-content: center;
   }
 }
+
+/* Centered top legend row for bar/line charts */
+.chart-legend-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin-bottom: 12px;
+}

@@ -158,6 +158,7 @@ function renderIncomeExpensesBar(canvasId, months, incomeData, expenseData) {
   const ctx    = canvas.getContext('2d');
   const opts   = defaultOptions();
   opts.scales  = defaultScales((v) => formatShekel(v));
+  opts.plugins.legend.display = false;
   opts.plugins.tooltip.callbacks = {
     label: (c) => `${c.dataset.label}: ${formatShekel(c.parsed.y)}`,
   };
@@ -412,6 +413,7 @@ function renderNetWorthLine(canvasId, months, values) {
   const ctx    = canvas.getContext('2d');
   const opts   = defaultOptions();
   opts.scales  = defaultScales((v) => formatShekel(v));
+  opts.plugins.legend.display = false;
   opts.plugins.tooltip.callbacks = {
     label: (c) => `שווי נקי: ${formatShekel(c.parsed.y)}`,
   };
@@ -456,6 +458,7 @@ function renderESPPBar(canvasId, dates, amounts) {
   const ctx    = canvas.getContext('2d');
   const opts   = defaultOptions();
   opts.scales  = defaultScales((v) => formatShekel(v));
+  opts.plugins.legend.display = false;
   opts.plugins.tooltip.callbacks = {
     label: (c) => `סכום נטו: ${formatShekel(c.parsed.y)}`,
   };
@@ -497,6 +500,7 @@ function renderNetWorthStackedArea(canvasId, months, portfolio, cashFund, saving
   opts.scales  = defaultScales((v) => formatShekel(v));
   opts.scales.x.stacked = true;
   opts.scales.y.stacked = true;
+  opts.plugins.legend.display = false;
   opts.plugins.tooltip.callbacks = {
     label: (c) => `${c.dataset.label}: ${formatShekel(c.parsed.y)}`,
   };

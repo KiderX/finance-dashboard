@@ -94,6 +94,16 @@
           <span>הכנסות מול הוצאות</span>
           <span style="color:var(--gold-lite);font-size:0.75rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;" id="yearly-chart-year"></span>
         </div>
+        <div class="chart-legend-row">
+          <div class="donut-legend-item">
+            <span class="donut-legend-dot" style="background:#10B981;box-shadow:0 0 6px 2px #10B98188;"></span>
+            <span class="donut-legend-name">הכנסות</span>
+          </div>
+          <div class="donut-legend-item">
+            <span class="donut-legend-dot" style="background:#F43F5E;box-shadow:0 0 6px 2px #F43F5E88;"></span>
+            <span class="donut-legend-name">הוצאות</span>
+          </div>
+        </div>
         <div class="chart-glow-wrap chart-container-hero">
           <canvas id="yearly-income-expense-chart"></canvas>
         </div>
@@ -103,9 +113,11 @@
       <div class="bento-grid">
         <div class="card">
           <div class="card-title">אחוז חיסכון לאורך זמן</div>
-          <div class="donut-legend-item" style="margin-bottom:10px;">
-            <span class="donut-legend-dot" style="background:#10B981;box-shadow:0 0 6px 2px #10B98188;"></span>
-            <span class="donut-legend-name">אחוז חיסכון</span>
+          <div class="chart-legend-row">
+            <div class="donut-legend-item">
+              <span class="donut-legend-dot" style="background:#10B981;box-shadow:0 0 6px 2px #10B98188;"></span>
+              <span class="donut-legend-name">אחוז חיסכון</span>
+            </div>
           </div>
           <div class="chart-glow-wrap chart-container-md">
             <canvas id="savings-rate-chart"></canvas>
@@ -124,6 +136,12 @@
 
         <div class="card">
           <div class="card-title">ESPP שנתי</div>
+          <div class="chart-legend-row">
+            <div class="donut-legend-item">
+              <span class="donut-legend-dot" style="background:#F59E0B;box-shadow:0 0 6px 2px #F59E0B88;"></span>
+              <span class="donut-legend-name">ESPP נטו</span>
+            </div>
+          </div>
           <div id="espp-summary" style="margin-bottom:12px;"><p class="text-muted" style="font-size:0.82rem;">טוען...</p></div>
           <div class="chart-glow-wrap chart-container-sm">
             <canvas id="espp-yearly-chart"></canvas>
