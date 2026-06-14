@@ -17,7 +17,7 @@ const CHART_COLORS = {
   cardBg:     'rgba(6, 10, 20, 0.97)',
   text:       '#F1F5F9',
   grid:       'rgba(255, 255, 255, 0.035)',
-  allocation: ['#22D3EE', '#F59E0B', '#10B981', '#8B5CF6', '#FB7185'],
+  allocation: ['#0EA5E9', '#6366F1', '#0D9488', '#7C3AED', '#64748B'],
 };
 
 const SAVINGS_THRESHOLDS = { good: 20, warn: 10 };
@@ -215,7 +215,7 @@ function buildDonutLegend(container, labels, data, colors) {
     const pct   = total > 0 ? Math.round((data[i] / total) * 100) + '%' : '0%';
     return `
       <div class="donut-legend-item">
-        <span class="donut-legend-dot" style="background:${color};box-shadow:0 0 3px 1px ${color}55;"></span>
+        <span class="donut-legend-dot" style="background:${color};box-shadow:0 0 6px 2px ${color}88;"></span>
         <span class="donut-legend-name">${lbl}</span>
         <span class="donut-legend-pct">${pct}</span>
       </div>`;
