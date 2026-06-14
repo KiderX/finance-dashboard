@@ -340,39 +340,9 @@ tbody td { padding: 11px 14px; text-align: right; vertical-align: middle; }
 .amount-positive { color: var(--income);  font-weight: 700; }
 .amount-negative { color: var(--expense); font-weight: 700; }
 
-/* ── Inline edit — income & allocation ──────────────────── */
-.income-input,
-.allocation-input {
-  display: none;
-  background: transparent;
-  border: none;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
-  font-weight: 700;
-  font-family: 'Heebo', sans-serif;
-  font-size: 0.9rem;
-  text-align: right;
-  width: 100%;
-  padding: 2px 0;
-  outline: none;
-  direction: ltr;
-  transition: border-color 0.2s;
-}
-
-.income-input       { color: var(--income); }
-.income-input:focus { border-bottom-color: var(--income); }
-.allocation-input       { color: var(--violet-lite); }
-.allocation-input:focus { border-bottom-color: var(--violet); }
-
+/* ── Income / Allocation display values ──────────────────── */
 .income-display-val     { color: var(--income);      font-weight: 700; }
 .allocation-display-val { color: var(--violet-lite);  font-weight: 700; }
-
-.income-editing .income-input         { display: inline-block; }
-.income-editing .income-display-val   { display: none; }
-.allocation-editing .allocation-input { display: inline-block; }
-.allocation-editing .allocation-display-val { display: none; }
-
-body.readonly .income-display-val { display: inline; }
-body.readonly .income-input       { display: none; }
 
 /* ── Total row ───────────────────────────────────────────── */
 .total-row td {
@@ -900,4 +870,357 @@ select option { background: #0A1020; color: var(--text); }
   .stats-grid { grid-template-columns: 1fr; }
   .login-card { padding: 32px 20px; }
   .card-value { font-size: 2rem; letter-spacing: -1px; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EXTENSIONS — Edit Modals · Month Picker · Dark/Light Toggle
+   Expense Collapse · Yearly KPI · Theme Persistence
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Theme toggle button ─────────────────────────────────── */
+.theme-toggle-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.theme-toggle-btn:hover {
+  background: rgba(139, 92, 246, 0.14);
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.2);
+}
+
+/* ── Month picker ────────────────────────────────────────── */
+.month-nav-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.month-display.clickable { cursor: pointer; user-select: none; }
+.month-display.clickable:hover {
+  border-color: rgba(139, 92, 246, 0.45);
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.month-picker-popup {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(8, 14, 28, 0.97);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(139, 92, 246, 0.32);
+  border-radius: 20px;
+  padding: 18px;
+  z-index: 300;
+  min-width: 264px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55), 0 0 30px rgba(139, 92, 246, 0.1);
+  direction: rtl;
+}
+
+.month-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  direction: ltr;
+}
+
+.month-picker-year-label {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+
+.month-picker-nav {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 5px 10px;
+  border-radius: 8px;
+  transition: all 0.15s;
+  font-family: 'Heebo', sans-serif;
+}
+.month-picker-nav:hover {
+  color: var(--violet-lite);
+  background: rgba(139, 92, 246, 0.14);
+}
+
+.month-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.month-picker-btn {
+  padding: 9px 4px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'Heebo', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+.month-picker-btn:hover {
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--text);
+  border-color: rgba(139, 92, 246, 0.22);
+}
+.month-picker-btn.active {
+  background: linear-gradient(135deg, var(--violet-lite), var(--violet));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 12px rgba(139, 92, 246, 0.38);
+}
+
+/* ── Expense group collapse ──────────────────────────────── */
+.category-group-header.cat-clickable { cursor: pointer; }
+.category-group-header.cat-clickable td { transition: background 0.15s; }
+.category-group-header.cat-clickable:hover td {
+  background: rgba(139, 92, 246, 0.07) !important;
+}
+
+/* ── Modal form inputs ───────────────────────────────────── */
+.modal .form-group label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* ── Yearly KPI stats strip ──────────────────────────────── */
+.yearly-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.yearly-stats-grid .card { margin-bottom: 0; }
+.yearly-stats-grid .card-value { font-size: 1.85rem; }
+
+/* ── fw-700 utility ──────────────────────────────────────── */
+.fw-700 { font-weight: 700; }
+
+/* ══════════════════════════════════════════════════════════
+   LIGHT MODE  — [data-theme="light"]
+   ══════════════════════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg:         #F1F5F9;
+  --text:       #0F172A;
+  --text-muted: #475569;
+  --border:     rgba(0, 0, 0, 0.08);
+  --glow-violet: 0 4px 20px rgba(139, 92, 246, 0.14);
+  --glow-income: 0 4px 14px rgba(16, 185, 129, 0.1);
+}
+
+[data-theme="light"] body {
+  background-image:
+    radial-gradient(ellipse 90% 55% at 85% 5%,  rgba(139, 92, 246, 0.05) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 45% at 10% 90%, rgba(16, 185, 129, 0.03) 0%, transparent 55%);
+}
+
+[data-theme="light"] .sidebar {
+  background: rgba(255, 255, 255, 0.96);
+  border-left-color: rgba(0, 0, 0, 0.07);
+}
+[data-theme="light"] .sidebar-logo { border-bottom-color: rgba(0, 0, 0, 0.06); }
+[data-theme="light"] .sidebar-footer { border-top-color: rgba(0, 0, 0, 0.06); }
+[data-theme="light"] .nav-item:hover { background: rgba(139, 92, 246, 0.07); color: var(--text); }
+[data-theme="light"] .nav-item { color: var(--text-muted); }
+[data-theme="light"] .nav-item.active {
+  background: linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(109,40,217,0.05) 100%);
+  color: var(--violet);
+}
+[data-theme="light"] .nav-item.active::after { box-shadow: 0 0 8px rgba(139,92,246,0.35); }
+[data-theme="light"] .sidebar-logo span { color: var(--text); }
+
+[data-theme="light"] .card {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.07), 0 1px 0 rgba(255,255,255,0.9) inset;
+}
+[data-theme="light"] .card::before {
+  background: linear-gradient(135deg,
+    rgba(139,92,246,0.2) 0%,
+    rgba(0,0,0,0.03) 45%,
+    rgba(139,92,246,0.08) 100%
+  );
+}
+[data-theme="light"] .card:hover {
+  box-shadow: 0 6px 28px rgba(0,0,0,0.1), 0 0 18px rgba(139,92,246,0.08);
+}
+
+[data-theme="light"] .card-title { color: var(--text-muted); }
+[data-theme="light"] .card-value.income { text-shadow: none; }
+[data-theme="light"] .card-value { color: var(--text); }
+
+[data-theme="light"] thead th {
+  background: rgba(139,92,246,0.04);
+  border-bottom-color: rgba(0,0,0,0.06);
+  color: var(--text-muted);
+}
+[data-theme="light"] tbody tr { border-bottom-color: rgba(0,0,0,0.04); }
+[data-theme="light"] tbody tr:hover { background: rgba(139,92,246,0.04) !important; }
+[data-theme="light"] td { color: var(--text); }
+
+[data-theme="light"] .total-row td {
+  background: rgba(139,92,246,0.05) !important;
+  border-top-color: rgba(139,92,246,0.12);
+  color: var(--text);
+}
+
+[data-theme="light"] .category-group-header td {
+  background: transparent !important;
+  color: var(--violet);
+}
+[data-theme="light"] .category-group-header td::before { opacity: 0.35; }
+[data-theme="light"] .category-subgroup-header td { background: rgba(139,92,246,0.03) !important; }
+[data-theme="light"] .cat-detail-row td { background: rgba(0,0,0,0.02) !important; }
+[data-theme="light"] .cat-detail-cell { color: var(--text-muted) !important; }
+
+[data-theme="light"] .modal-overlay { background: rgba(0, 0, 0, 0.35); }
+[data-theme="light"] .modal {
+  background: rgba(255,255,255,0.98);
+  border-color: rgba(139,92,246,0.15);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.12), 0 0 20px rgba(139,92,246,0.05);
+}
+[data-theme="light"] .modal-title {
+  border-bottom-color: rgba(0,0,0,0.07);
+  color: var(--text);
+}
+[data-theme="light"] .modal-actions { border-top-color: rgba(0,0,0,0.07); }
+
+[data-theme="light"] .month-display,
+[data-theme="light"] .year-display { border-color: rgba(0,0,0,0.1); background: rgba(255,255,255,0.9); color: var(--text); }
+[data-theme="light"] .month-nav-btn {
+  border-color: rgba(0,0,0,0.1);
+  background: rgba(255,255,255,0.9);
+  color: var(--text);
+}
+[data-theme="light"] .month-nav-btn:hover {
+  border-color: rgba(139,92,246,0.45);
+  box-shadow: 0 0 12px rgba(139,92,246,0.15);
+}
+
+[data-theme="light"] .btn-outline {
+  border-color: rgba(0,0,0,0.14);
+  color: var(--text);
+}
+[data-theme="light"] .btn-outline:hover {
+  background: rgba(139,92,246,0.08);
+  border-color: rgba(139,92,246,0.35);
+  box-shadow: 0 0 14px rgba(139,92,246,0.1);
+}
+[data-theme="light"] .btn-primary { color: #fff; }
+[data-theme="light"] .btn-success { color: #fff; }
+[data-theme="light"] .btn-danger  { color: #fff; }
+
+[data-theme="light"] input[type="text"],
+[data-theme="light"] input[type="number"],
+[data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="email"],
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.12);
+  color: var(--text);
+}
+[data-theme="light"] input[type="text"]:focus,
+[data-theme="light"] input[type="number"]:focus,
+[data-theme="light"] select:focus {
+  border-color: rgba(139,92,246,0.45);
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.1);
+}
+
+[data-theme="light"] .spinner { border-color: rgba(139,92,246,0.1); border-top-color: var(--violet); }
+
+[data-theme="light"] .upload-zone {
+  background: rgba(139,92,246,0.02);
+  border-color: rgba(0,0,0,0.1);
+}
+[data-theme="light"] .upload-zone:hover, [data-theme="light"] .upload-zone.dragover {
+  border-color: rgba(139,92,246,0.4);
+  background: rgba(139,92,246,0.04);
+}
+
+[data-theme="light"] .step {
+  background: rgba(255,255,255,0.85);
+  border-color: rgba(0,0,0,0.08);
+  color: var(--text);
+}
+[data-theme="light"] .step.active {
+  background: rgba(139,92,246,0.07);
+  border-color: rgba(139,92,246,0.22);
+}
+
+[data-theme="light"] .login-card {
+  background: rgba(255,255,255,0.95);
+  border-color: rgba(139,92,246,0.2);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.1), 0 0 30px rgba(139,92,246,0.05);
+}
+[data-theme="light"] .login-title {
+  background: linear-gradient(135deg, #1e293b 0%, var(--violet) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+[data-theme="light"] .login-subtitle { color: var(--text-muted); }
+
+[data-theme="light"] .month-picker-popup {
+  background: rgba(255,255,255,0.98);
+  border-color: rgba(139,92,246,0.2);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.14);
+}
+[data-theme="light"] .month-picker-btn { color: var(--text-muted); }
+[data-theme="light"] .month-picker-btn:hover { background: rgba(139,92,246,0.08); color: var(--text); }
+[data-theme="light"] .month-picker-year-label { color: var(--text); }
+[data-theme="light"] .month-picker-nav { color: var(--text-muted); }
+
+[data-theme="light"] .badge-info { background: rgba(139,92,246,0.1); color: var(--violet); }
+[data-theme="light"] .badge-success { background: rgba(16,185,129,0.1); color: var(--income); }
+[data-theme="light"] .badge-danger { background: rgba(244,63,94,0.1); color: var(--expense); }
+
+[data-theme="light"] .error-msg { background: rgba(244,63,94,0.06); color: var(--expense); }
+[data-theme="light"] .success-msg { background: rgba(16,185,129,0.06); color: var(--income); }
+
+[data-theme="light"] .dupe-label { background: var(--expense); }
+[data-theme="light"] .user-info { color: var(--text-muted); }
+
+[data-theme="light"] .theme-toggle-btn {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.12);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.15); }
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,0.28); }
+
+[data-theme="light"] .page-title { color: var(--text); }
+[data-theme="light"] .page-header { border-bottom-color: rgba(0,0,0,0.06); }
+
+@media (max-width: 768px) {
+  .yearly-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .month-picker-popup { min-width: 220px; }
 }

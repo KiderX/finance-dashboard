@@ -1,13 +1,15 @@
 'use strict';
 
 let currentMonth = '';
-let _txData = [];               // full sheet data — for row-index lookups on delete
-let _currentTransactions = [];  // filtered to current month — for click-to-expand
+let _txData = [];
+let _currentTransactions = [];
+let _allIncomeData  = null;
+let _allAllocData   = null;
+let _pickerYear     = new Date().getFullYear();
 
 const HEBREW_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
-// Income sheet column layout (0-indexed):
-// חודש(0) | משכורת ראשונה(1) | משכורת שנייה(2) | בונוסים(3) | ESPP(4) | הכנסות נוספות(5) | סה"כ(6) | הערות(7)
+// Income sheet: חודש(0) | משכורת ראשונה(1) | משכורת שנייה(2) | בונוסים(3) | ESPP(4) | הכנסות נוספות(5) | סה"כ(6) | הערות(7)
 const INCOME_LABELS = ['משכורת ראשונה', 'משכורת שנייה', 'בונוסים', 'ESPP', 'הכנסות נוספות'];
 
 function getCurrentMonthStr() {
@@ -40,13 +42,13 @@ function findRowForMonth(sheetData, monthStr) {
 
 function filterTransactionsByMonth(data, monthStr) {
   if (!data || data.length < 2) return [];
-  const headers = data[0];
+  const headers  = data[0];
   const monthIdx = headers.indexOf('חודש');
   if (monthIdx === -1) return [];
   return data.slice(1).filter(row => row[monthIdx] === monthStr);
 }
 
-// ── Render income panel ───────────────────────────────────
+// ── Render income panel (display only — editing via modal) ──
 function renderIncome(incomeRow) {
   const tbody = document.getElementById('income-table-body');
   tbody.innerHTML = '';
@@ -54,65 +56,69 @@ function renderIncome(incomeRow) {
 
   INCOME_LABELS.forEach((label, idx) => {
     const value = incomeRow ? parseFloat(incomeRow[idx + 1] || 0) : 0;
-    total += isNaN(value) ? 0 : value;
+    const v = isNaN(value) ? 0 : value;
+    total += v;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${label}</td>
-      <td>
-        <span class="amount-positive income-display-val">${formatShekel(value)}</span>
-        <input type="number" class="income-input write-only" data-col="${idx + 1}" value="${value || ''}" placeholder="0" />
-      </td>`;
+      <td class="amount-positive income-display-val" data-col="${idx + 1}" data-value="${v}">${formatShekel(v)}</td>`;
     tbody.appendChild(tr);
   });
 
   document.getElementById('income-total-cell').textContent = formatShekel(total);
   window._dashIncome = total;
-
-  tbody.querySelectorAll('.income-input').forEach(inp => {
-    inp.addEventListener('input', () => {
-      let t = 0;
-      tbody.querySelectorAll('.income-input').forEach(i => { t += parseFloat(i.value || 0); });
-      document.getElementById('income-total-cell').textContent = formatShekel(t);
-      window._dashIncome = t;
-      updateProfitStats();
-    });
-  });
-
   updateProfitStats();
 }
 
-// ── Income edit mode ──────────────────────────────────────
-function enterIncomeEditMode() {
-  document.getElementById('income-table-body').classList.add('income-editing');
-  document.getElementById('edit-income-btn').style.display    = 'none';
-  document.getElementById('income-edit-mode-btns').style.display = 'flex';
-  document.querySelector('#income-table-body .income-input')?.focus();
-}
+// ── Income edit modal ────────────────────────────────────────
+function openIncomeModal() {
+  const tbody  = document.getElementById('income-table-body');
+  const fields = document.getElementById('income-modal-fields');
+  if (!fields) return;
 
-function exitIncomeEditMode() {
-  const tbody = document.getElementById('income-table-body');
-  // Sync display spans with current input values before hiding inputs
-  tbody.querySelectorAll('tr').forEach(tr => {
-    const inp  = tr.querySelector('.income-input');
-    const span = tr.querySelector('.income-display-val');
-    if (inp && span) span.textContent = formatShekel(parseFloat(inp.value || 0));
+  fields.innerHTML = '';
+  let total = 0;
+
+  INCOME_LABELS.forEach((label, idx) => {
+    const cell = tbody.querySelector(`[data-col="${idx + 1}"]`);
+    const v    = parseFloat(cell?.dataset.value || '0') || 0;
+    total += v;
+
+    const div = document.createElement('div');
+    div.className = 'form-group';
+    div.innerHTML = `
+      <label for="income-modal-inp-${idx}">${escHtml(label)}</label>
+      <input type="number" id="income-modal-inp-${idx}" class="income-modal-inp"
+             data-idx="${idx}" value="${v || ''}" placeholder="0" step="0.01" />`;
+    fields.appendChild(div);
   });
-  tbody.classList.remove('income-editing');
-  document.getElementById('edit-income-btn').style.display       = '';
-  document.getElementById('income-edit-mode-btns').style.display = 'none';
+
+  document.getElementById('income-modal-month').textContent  = formatMonthHebrew(currentMonth);
+  document.getElementById('income-modal-total').textContent  = formatShekel(total);
+  document.getElementById('income-modal-msg').innerHTML      = '';
+
+  fields.querySelectorAll('.income-modal-inp').forEach(inp => {
+    inp.addEventListener('input', () => {
+      let t = 0;
+      fields.querySelectorAll('.income-modal-inp').forEach(i => { t += parseFloat(i.value || 0); });
+      document.getElementById('income-modal-total').textContent = formatShekel(t);
+    });
+  });
+
+  document.getElementById('income-modal').classList.add('open');
+  fields.querySelector('.income-modal-inp')?.focus();
 }
 
-// ── Save income ───────────────────────────────────────────
-async function saveIncome(allIncomeData) {
-  const btn = document.getElementById('save-income-btn');
-  const msg = document.getElementById('income-save-msg');
+async function saveIncomeFromModal() {
+  const btn = document.getElementById('save-income-modal');
+  const msg = document.getElementById('income-modal-msg');
   btn.disabled = true; btn.textContent = 'שומר...';
 
   try {
-    const values = Array.from(document.querySelectorAll('.income-input')).map(i => parseFloat(i.value || 0));
+    const values = Array.from(document.querySelectorAll('.income-modal-inp')).map(i => parseFloat(i.value || 0));
     const total  = values.reduce((a, b) => a + b, 0);
     const row    = [currentMonth, ...values, total, ''];
-    const rowNum = SheetsAPI.findMonthRow(allIncomeData, currentMonth);
+    const rowNum = SheetsAPI.findMonthRow(_allIncomeData, currentMonth);
 
     if (rowNum === -1) {
       await SheetsAPI.appendRows(CONFIG.SHEETS.INCOME, [row]);
@@ -120,21 +126,15 @@ async function saveIncome(allIncomeData) {
       await SheetsAPI.updateRange(CONFIG.SHEETS.INCOME, `A${rowNum}:H${rowNum}`, [row]);
     }
 
-    window._dashIncome = total;
-    document.getElementById('income-total-cell').textContent = formatShekel(total);
-    document.getElementById('stat-income').textContent = formatShekel(total);
-    updateProfitStats();
-    exitIncomeEditMode();
-    msg.innerHTML = '<div class="success-msg">נשמר ✓</div>';
-    setTimeout(() => { msg.innerHTML = ''; }, 3000);
+    document.getElementById('income-modal').classList.remove('open');
+    await loadMonth(currentMonth);
   } catch (err) {
     msg.innerHTML = `<div class="error-msg">${err.message}</div>`;
-  } finally {
     btn.disabled = false; btn.textContent = 'שמור ✓';
   }
 }
 
-// ── Category normalization (shared by expenses + transactions table) ──
+// ── Category normalization ───────────────────────────────────
 function normalizeCategory(merchant, rawCat) {
   let cat = CONFIG.LEGACY_CATEGORY_MAP[rawCat] || rawCat;
   for (const [pattern, mappedCat] of CONFIG.MERCHANT_CATEGORY_MAP) {
@@ -143,7 +143,7 @@ function normalizeCategory(merchant, rawCat) {
   return cat;
 }
 
-// ── Click-to-expand: show transactions under a sub-category row ───────
+// ── Click-to-expand: transactions under a sub-category ────────
 function toggleCategoryDetails(catName, triggerTr, tbody) {
   const existing = Array.from(tbody.querySelectorAll('.cat-detail-row'))
     .filter(r => r.dataset.forCat === catName);
@@ -179,7 +179,7 @@ function toggleCategoryDetails(catName, triggerTr, tbody) {
   });
 }
 
-// ── Render expenses by category ───────────────────────────
+// ── Render expenses — collapsed to group headers by default ───
 function renderExpenses(transactions) {
   _currentTransactions = transactions;
 
@@ -194,20 +194,6 @@ function renderExpenses(transactions) {
   let grandTotal = 0;
   const shownCats = new Set();
 
-  function addSubRow(sub, paddingRight) {
-    shownCats.add(sub);
-    const amt = catTotals[sub] || 0;
-    if (amt === 0) return;
-    const tr = document.createElement('tr');
-    tr.className = 'category-sub-row cat-clickable';
-    tr.dataset.cat = sub;
-    tr.innerHTML = `
-      <td style="padding-right:${paddingRight}px;">${escHtml(sub)} <span class="cat-expand-icon">▸</span></td>
-      <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>`;
-    tr.addEventListener('click', () => toggleCategoryDetails(sub, tr, tbody));
-    tbody.appendChild(tr);
-  }
-
   CONFIG.CATEGORY_GROUPS.forEach(group => {
     const directTotal   = group.subs.reduce((s, c) => s + (catTotals[c] || 0), 0);
     const subGroupTotal = (group.subGroups || []).reduce((s, sg) =>
@@ -216,28 +202,50 @@ function renderExpenses(transactions) {
     if (groupTotal === 0) return;
     grandTotal += groupTotal;
 
+    // Group header — visible, clickable to expand/collapse children
     const headerTr = document.createElement('tr');
-    headerTr.className = 'category-group-header';
+    headerTr.className = 'category-group-header cat-clickable';
     headerTr.innerHTML = `
-      <td>${escHtml(group.name)}</td>
+      <td>${escHtml(group.name)} <span class="cat-expand-icon" style="opacity:0.5;">▸</span></td>
       <td class="${groupTotal < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(groupTotal)}</td>`;
     tbody.appendChild(headerTr);
 
-    group.subs.forEach(sub => addSubRow(sub, 24));
+    // Collect all child rows for this group (for bulk show/hide)
+    const groupChildRows = [];
 
+    // Direct sub-category rows — hidden by default
+    group.subs.forEach(sub => {
+      shownCats.add(sub);
+      const amt = catTotals[sub] || 0;
+      if (amt === 0) return;
+      const tr = document.createElement('tr');
+      tr.className       = 'category-sub-row cat-clickable';
+      tr.dataset.cat     = sub;
+      tr.style.display   = 'none';
+      tr.innerHTML = `
+        <td style="padding-right:24px;">${escHtml(sub)} <span class="cat-expand-icon">▸</span></td>
+        <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>`;
+      tr.addEventListener('click', () => toggleCategoryDetails(sub, tr, tbody));
+      tbody.appendChild(tr);
+      groupChildRows.push(tr);
+    });
+
+    // Sub-groups — header hidden by default
     (group.subGroups || []).forEach(sg => {
       const sgTotal = sg.subs.reduce((s, c) => s + (catTotals[c] || 0), 0);
       if (sgTotal === 0) return;
 
       const sgTr = document.createElement('tr');
-      sgTr.className = 'category-subgroup-header cat-clickable';
+      sgTr.className    = 'category-subgroup-header cat-clickable';
+      sgTr.style.display = 'none';
       sgTr.innerHTML = `
         <td style="padding-right:24px;">${escHtml(sg.name)} <span class="cat-expand-icon">▸</span></td>
         <td class="${sgTotal < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(sgTotal)}</td>`;
       tbody.appendChild(sgTr);
+      groupChildRows.push(sgTr);
 
-      // Sub-items start hidden; clicking the sub-group header toggles them
-      const subRows = [];
+      // Sub-group items — hidden until sub-group header clicked
+      const subItems = [];
       sg.subs.forEach(sub => {
         shownCats.add(sub);
         const amt = catTotals[sub] || 0;
@@ -251,18 +259,17 @@ function renderExpenses(transactions) {
           <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>`;
         tr.addEventListener('click', () => toggleCategoryDetails(sub, tr, tbody));
         tbody.appendChild(tr);
-        subRows.push(tr);
+        subItems.push(tr);
       });
 
       sgTr.addEventListener('click', () => {
         const icon   = sgTr.querySelector('.cat-expand-icon');
-        const isOpen = subRows.some(r => r.style.display !== 'none');
-        subRows.forEach(r => { r.style.display = isOpen ? 'none' : ''; });
+        const isOpen = subItems.some(r => r.style.display !== 'none');
+        subItems.forEach(r => { r.style.display = isOpen ? 'none' : ''; });
         if (icon) icon.textContent = isOpen ? '▸' : '▾';
         sgTr.classList.toggle('cat-expanded', !isOpen);
-        // Collapse transaction details when closing the sub-group
         if (isOpen) {
-          subRows.forEach(r => {
+          subItems.forEach(r => {
             Array.from(tbody.querySelectorAll('.cat-detail-row'))
               .filter(d => d.dataset.forCat === r.dataset.cat)
               .forEach(d => d.remove());
@@ -273,9 +280,31 @@ function renderExpenses(transactions) {
         }
       });
     });
+
+    // Group header toggle — show/hide all direct children and sub-group headers
+    headerTr.addEventListener('click', () => {
+      const icon   = headerTr.querySelector('.cat-expand-icon');
+      const isOpen = groupChildRows.some(r => r.style.display !== 'none');
+      groupChildRows.forEach(r => { r.style.display = isOpen ? 'none' : ''; });
+      if (icon) icon.textContent = isOpen ? '▸' : '▾';
+      headerTr.classList.toggle('cat-expanded', !isOpen);
+      if (isOpen) {
+        // Collapse all sub-content when closing group
+        groupChildRows.forEach(r => {
+          if (r.dataset?.cat) {
+            Array.from(tbody.querySelectorAll('.cat-detail-row'))
+              .filter(d => d.dataset.forCat === r.dataset.cat)
+              .forEach(d => d.remove());
+          }
+          r.classList.remove('cat-expanded');
+          const ri = r.querySelector('.cat-expand-icon');
+          if (ri) ri.textContent = '▸';
+        });
+      }
+    });
   });
 
-  // Legacy / ungrouped categories not covered by any group
+  // Legacy / ungrouped categories
   Object.keys(catTotals).forEach(cat => {
     if (shownCats.has(cat) || catTotals[cat] === 0) return;
     const amt = catTotals[cat];
@@ -294,7 +323,7 @@ function renderExpenses(transactions) {
   renderIncomeExpensesBar('income-expense-chart', [currentMonth], [window._dashIncome || 0], [grandTotal]);
 }
 
-// ── Stats calculations ────────────────────────────────────
+// ── Stats calculations ────────────────────────────────────────
 function updateProfitStats() {
   const income   = window._dashIncome   || 0;
   const expenses = window._dashExpenses || 0;
@@ -303,8 +332,8 @@ function updateProfitStats() {
 
   const profitEl = document.getElementById('stat-profit');
   if (profitEl) {
-    profitEl.textContent  = formatShekel(profit);
-    profitEl.className    = 'card-value ' + (profit >= 0 ? 'income' : 'expense');
+    profitEl.textContent = formatShekel(profit);
+    profitEl.className   = 'card-value ' + (profit >= 0 ? 'income' : 'expense');
   }
 
   const rateEl = document.getElementById('stat-savings-rate');
@@ -317,7 +346,7 @@ function updateProfitStats() {
   if (allocEl) allocEl.textContent = formatShekel(profit);
 }
 
-// ── Transactions table ────────────────────────────────────
+// ── Transactions table ────────────────────────────────────────
 function renderTransactions(transactions) {
   const tbody = document.getElementById('transactions-table-body');
   const badge = document.getElementById('transaction-count');
@@ -336,8 +365,7 @@ function renderTransactions(transactions) {
     const [date, merchant, amount, rawCategory, type, notes, , , , hash] = row;
     const amt      = parseFloat(amount || 0);
     const category = normalizeCategory(merchant, rawCategory);
-    // Find the row's 0-based index in the full sheet data (including header row at index 0)
-    const fullIdx = _txData.findIndex((r, i) => i > 0 && r[9] === hash);
+    const fullIdx  = _txData.findIndex((r, i) => i > 0 && r[9] === hash);
     const tr = document.createElement('tr');
     tr.dataset.rowIndex = fullIdx;
     tr.dataset.hash     = hash || '';
@@ -372,68 +400,79 @@ function renderTransactions(transactions) {
   );
 }
 
-// ── Allocation panel ──────────────────────────────────────
-// ── Allocation edit mode ──────────────────────────────────
-let _allocationOriginalValues = [];
-
-function enterAllocationEditMode() {
-  const tbody = document.getElementById('allocation-tbody');
-  _allocationOriginalValues = Array.from(tbody.querySelectorAll('.allocation-input')).map(i => i.value);
-  tbody.classList.add('allocation-editing');
-  document.getElementById('edit-allocation-btn').style.display       = 'none';
-  document.getElementById('allocation-edit-mode-btns').style.display = 'flex';
-  tbody.querySelector('.allocation-input')?.focus();
-}
-
-function exitAllocationEditMode(revert = false) {
-  const tbody = document.getElementById('allocation-tbody');
-  if (revert) {
-    tbody.querySelectorAll('.allocation-input').forEach((inp, i) => {
-      inp.value = _allocationOriginalValues[i] || '';
-    });
-  }
-  tbody.querySelectorAll('tr').forEach(tr => {
-    const inp  = tr.querySelector('.allocation-input');
-    const span = tr.querySelector('.allocation-display-val');
-    if (inp && span) span.textContent = formatShekel(parseFloat(inp.value || 0));
-  });
-  updateAllocationTotal();
-  tbody.classList.remove('allocation-editing');
-  document.getElementById('edit-allocation-btn').style.display       = '';
-  document.getElementById('allocation-edit-mode-btns').style.display = 'none';
-}
-
+// ── Allocation panel ──────────────────────────────────────────
 function renderAllocation(allocationRow) {
   const tbody = document.getElementById('allocation-tbody');
   // Sheet: חודש(0) רווח(1) עו"ש(2) קרן כספית(3) השקעות(4) אחר(5) סה"כ(6) הערות(7)
-  tbody.querySelectorAll('tr').forEach((tr, i) => {
-    const inp  = tr.querySelector('.allocation-input');
-    const span = tr.querySelector('.allocation-display-val');
-    const val  = allocationRow ? (parseFloat(allocationRow[i + 2] || 0) || 0) : 0;
-    inp.value        = val || '';
-    span.textContent = formatShekel(val);
-    inp.addEventListener('input', updateAllocationTotal);
+  tbody.querySelectorAll('.allocation-display-val').forEach((span, i) => {
+    const val = allocationRow ? (parseFloat(allocationRow[i + 2] || 0) || 0) : 0;
+    span.textContent    = formatShekel(val);
+    span.dataset.value  = val;
   });
   updateAllocationTotal();
 }
 
 function updateAllocationTotal() {
   let total = 0;
-  document.querySelectorAll('.allocation-input').forEach(i => { total += parseFloat(i.value || 0); });
+  document.querySelectorAll('#allocation-tbody .allocation-display-val').forEach(span => {
+    total += parseFloat(span.dataset.value || '0') || 0;
+  });
   document.getElementById('allocation-total-cell').textContent = formatShekel(total);
 }
 
-async function saveAllocation(allAllocationData) {
-  const btn = document.getElementById('save-allocation-btn');
-  const msg = document.getElementById('allocation-save-msg');
+// ── Allocation edit modal ─────────────────────────────────────
+const ALLOC_LABELS = ['עו"ש', 'קרן כספית', 'השקעות', 'אחר'];
+
+function openAllocationModal() {
+  const tbody  = document.getElementById('allocation-tbody');
+  const fields = document.getElementById('allocation-modal-fields');
+  if (!fields) return;
+
+  fields.innerHTML = '';
+  let total = 0;
+
+  tbody.querySelectorAll('.allocation-display-val').forEach((span, i) => {
+    const v = parseFloat(span.dataset.value || '0') || 0;
+    total += v;
+
+    const div = document.createElement('div');
+    div.className = 'form-group';
+    div.innerHTML = `
+      <label for="alloc-modal-inp-${i}">${escHtml(ALLOC_LABELS[i])}</label>
+      <input type="number" id="alloc-modal-inp-${i}" class="alloc-modal-inp"
+             data-row="${i}" value="${v || ''}" placeholder="0" step="0.01" />`;
+    fields.appendChild(div);
+  });
+
+  const profit = (window._dashIncome || 0) - (window._dashExpenses || 0);
+  document.getElementById('allocation-modal-month').textContent  = formatMonthHebrew(currentMonth);
+  document.getElementById('allocation-modal-profit').textContent = formatShekel(profit);
+  document.getElementById('allocation-modal-total').textContent  = formatShekel(total);
+  document.getElementById('allocation-modal-msg').innerHTML      = '';
+
+  fields.querySelectorAll('.alloc-modal-inp').forEach(inp => {
+    inp.addEventListener('input', () => {
+      let t = 0;
+      fields.querySelectorAll('.alloc-modal-inp').forEach(i => { t += parseFloat(i.value || 0); });
+      document.getElementById('allocation-modal-total').textContent = formatShekel(t);
+    });
+  });
+
+  document.getElementById('allocation-modal').classList.add('open');
+  fields.querySelector('.alloc-modal-inp')?.focus();
+}
+
+async function saveAllocationFromModal() {
+  const btn = document.getElementById('save-allocation-modal');
+  const msg = document.getElementById('allocation-modal-msg');
   btn.disabled = true; btn.textContent = 'שומר...';
 
   try {
-    const values = Array.from(document.querySelectorAll('.allocation-input')).map(i => parseFloat(i.value || 0));
+    const values = Array.from(document.querySelectorAll('.alloc-modal-inp')).map(i => parseFloat(i.value || 0));
     const total  = values.reduce((a, b) => a + b, 0);
     const profit = (window._dashIncome || 0) - (window._dashExpenses || 0);
     const row    = [currentMonth, profit, ...values, total, ''];
-    const rowNum = SheetsAPI.findMonthRow(allAllocationData, currentMonth);
+    const rowNum = SheetsAPI.findMonthRow(_allAllocData, currentMonth);
 
     if (rowNum === -1) {
       await SheetsAPI.appendRows(CONFIG.SHEETS.PROFIT_ALLOCATION, [row]);
@@ -441,17 +480,51 @@ async function saveAllocation(allAllocationData) {
       await SheetsAPI.updateRange(CONFIG.SHEETS.PROFIT_ALLOCATION, `A${rowNum}:H${rowNum}`, [row]);
     }
 
-    exitAllocationEditMode();
-    msg.innerHTML = '<div class="success-msg">נשמר ✓</div>';
-    setTimeout(() => { msg.innerHTML = ''; }, 3000);
+    document.getElementById('allocation-modal').classList.remove('open');
+    await loadMonth(currentMonth);
   } catch (err) {
     msg.innerHTML = `<div class="error-msg">${err.message}</div>`;
-  } finally {
     btn.disabled = false; btn.textContent = 'שמור ✓';
   }
 }
 
-// ── Manual entry ─────────────────────────────────────────
+// ── Month picker ──────────────────────────────────────────────
+function buildMonthPicker() {
+  const grid  = document.getElementById('month-picker-grid');
+  const pyrEl = document.getElementById('picker-yr');
+  if (!grid || !pyrEl) return;
+
+  grid.innerHTML  = '';
+  pyrEl.textContent = _pickerYear;
+
+  const [curMM, curYYYY] = currentMonth ? currentMonth.split('/').map(Number) : [0, 0];
+
+  HEBREW_MONTHS.forEach((name, i) => {
+    const btn = document.createElement('button');
+    btn.className   = 'month-picker-btn';
+    btn.textContent = name.slice(0, 3);
+    if (_pickerYear === curYYYY && i + 1 === curMM) btn.classList.add('active');
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const mm = String(i + 1).padStart(2, '0');
+      closeMonthPicker();
+      loadMonth(`${mm}/${_pickerYear}`);
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function openMonthPicker() {
+  if (currentMonth) _pickerYear = parseInt(currentMonth.split('/')[1]) || new Date().getFullYear();
+  buildMonthPicker();
+  document.getElementById('month-picker')?.classList.remove('hidden');
+}
+
+function closeMonthPicker() {
+  document.getElementById('month-picker')?.classList.add('hidden');
+}
+
+// ── Manual entry ──────────────────────────────────────────────
 function generateHash(date, merchant, amount) {
   const str = `${date}_${merchant}_${amount}`;
   try { return btoa(unescape(encodeURIComponent(str))); } catch (_) { return btoa(str); }
@@ -489,7 +562,6 @@ function buildCategoryOptions(selected) {
 }
 
 function openManualEntryModal() {
-  // Pre-fill date: today's day in the currently viewed month
   const today  = new Date();
   const [mm, yyyy] = currentMonth.split('/');
   const dd = String(today.getDate()).padStart(2, '0');
@@ -538,11 +610,10 @@ async function saveManualEntry(closeAfter) {
       document.getElementById('dash-manual-modal').classList.remove('open');
       await loadMonth(currentMonth);
     } else {
-      // Keep modal open, reset fields, show success indicator
       const countEl = document.getElementById('dash-manual-added-count');
       const prev    = parseInt(countEl.dataset.count || '0', 10) + 1;
-      countEl.dataset.count   = prev;
-      countEl.textContent     = `✓ נוספו ${prev} עסקאות`;
+      countEl.dataset.count = prev;
+      countEl.textContent   = `✓ נוספו ${prev} עסקאות`;
       document.getElementById('dash-manual-merchant').value = '';
       document.getElementById('dash-manual-amount').value   = '';
       document.getElementById('dash-manual-notes').value    = '';
@@ -556,7 +627,7 @@ async function saveManualEntry(closeAfter) {
   }
 }
 
-// ── Load month ────────────────────────────────────────────
+// ── Load month ────────────────────────────────────────────────
 async function loadMonth(monthStr) {
   currentMonth = monthStr;
   localStorage.setItem('lastViewedMonth', monthStr);
@@ -569,11 +640,10 @@ async function loadMonth(monthStr) {
   loading.classList.remove('hidden');
   content.classList.add('hidden');
   errorDiv.innerHTML = '';
-  window._dashIncome = 0;
+  window._dashIncome   = 0;
   window._dashExpenses = 0;
 
   try {
-    // Single batchGet replaces 3 separate read calls → stays well under quota
     const batch = await SheetsAPI.batchGet([
       CONFIG.SHEETS.INCOME,
       CONFIG.SHEETS.TRANSACTIONS,
@@ -581,7 +651,9 @@ async function loadMonth(monthStr) {
     ]);
     const [incomeData, txData, allocData] = batch.valueRanges.map(vr => vr.values || []);
 
-    _txData = txData;  // store for delete row lookups
+    _txData         = txData;
+    _allIncomeData  = incomeData;
+    _allAllocData   = allocData;
 
     const incomeRow     = findRowForMonth(incomeData, monthStr);
     const transactions  = filterTransactionsByMonth(txData, monthStr);
@@ -594,9 +666,6 @@ async function loadMonth(monthStr) {
 
     document.getElementById('stat-income').textContent = formatShekel(window._dashIncome || 0);
 
-    document.getElementById('save-income-btn').onclick     = () => saveIncome(incomeData);
-    document.getElementById('save-allocation-btn').onclick = () => saveAllocation(allocData);
-
     loading.classList.add('hidden');
     content.classList.remove('hidden');
   } catch (err) {
@@ -605,7 +674,7 @@ async function loadMonth(monthStr) {
   }
 }
 
-// ── Init ──────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('hamburger').addEventListener('click', () =>
     document.getElementById('sidebar').classList.toggle('open'));
@@ -616,20 +685,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   loadCustomCategories();
 
+  // Month navigation
   document.getElementById('prev-month').addEventListener('click', () => loadMonth(shiftMonth(currentMonth, -1)));
   document.getElementById('next-month').addEventListener('click', () => loadMonth(shiftMonth(currentMonth, +1)));
 
-  document.getElementById('edit-income-btn').addEventListener('click', enterIncomeEditMode);
-  document.getElementById('cancel-income-btn').addEventListener('click', exitIncomeEditMode);
-  document.getElementById('edit-allocation-btn').addEventListener('click', enterAllocationEditMode);
-  document.getElementById('cancel-allocation-btn').addEventListener('click', () => exitAllocationEditMode(true));
+  // Month picker popup
+  document.getElementById('month-display')?.addEventListener('click', e => {
+    e.stopPropagation();
+    const picker = document.getElementById('month-picker');
+    if (picker?.classList.contains('hidden')) openMonthPicker();
+    else closeMonthPicker();
+  });
+  document.getElementById('picker-prev-yr')?.addEventListener('click', e => {
+    e.stopPropagation(); _pickerYear--; buildMonthPicker();
+  });
+  document.getElementById('picker-next-yr')?.addEventListener('click', e => {
+    e.stopPropagation(); _pickerYear++; buildMonthPicker();
+  });
+  document.addEventListener('click', e => {
+    const picker = document.getElementById('month-picker');
+    if (picker && !picker.classList.contains('hidden') && !picker.contains(e.target)) closeMonthPicker();
+  });
 
+  // Income modal
+  document.getElementById('edit-income-btn').addEventListener('click', openIncomeModal);
+  document.getElementById('cancel-income-modal').addEventListener('click', () => {
+    document.getElementById('income-modal').classList.remove('open');
+  });
+  document.getElementById('save-income-modal').addEventListener('click', saveIncomeFromModal);
+  document.getElementById('income-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('income-modal')) document.getElementById('income-modal').classList.remove('open');
+  });
+
+  // Allocation modal
+  document.getElementById('edit-allocation-btn').addEventListener('click', openAllocationModal);
+  document.getElementById('cancel-allocation-modal').addEventListener('click', () => {
+    document.getElementById('allocation-modal').classList.remove('open');
+  });
+  document.getElementById('save-allocation-modal').addEventListener('click', saveAllocationFromModal);
+  document.getElementById('allocation-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('allocation-modal')) document.getElementById('allocation-modal').classList.remove('open');
+  });
+
+  // Manual entry modal
   document.getElementById('add-txn-btn').addEventListener('click', openManualEntryModal);
   document.getElementById('dash-save-manual-btn').addEventListener('click', () => saveManualEntry(true));
   document.getElementById('dash-save-add-more-btn').addEventListener('click', () => saveManualEntry(false));
   document.getElementById('dash-cancel-manual-btn').addEventListener('click', async () => {
     document.getElementById('dash-manual-modal').classList.remove('open');
-    // If entries were saved while modal was open, reload to reflect them
     if (parseInt(document.getElementById('dash-manual-added-count').dataset.count || '0', 10) > 0) {
       await loadMonth(currentMonth);
     }

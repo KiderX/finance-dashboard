@@ -281,6 +281,34 @@ const SheetsAPI = (() => {
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Apply saved colour theme immediately (before paint to avoid flash)
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+
+  // Inject theme toggle button next to settings gear
+  const settingsBtn = document.getElementById('settings-btn');
+  if (settingsBtn) {
+    const themeBtn = document.createElement('button');
+    themeBtn.id          = 'theme-toggle-btn';
+    themeBtn.className   = 'btn btn-outline theme-toggle-btn';
+    themeBtn.title       = 'עבור בין מצב כהה/בהיר';
+    themeBtn.textContent = savedTheme === 'light' ? '☀️' : '🌙';
+    settingsBtn.parentNode.insertBefore(themeBtn, settingsBtn);
+
+    themeBtn.addEventListener('click', () => {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      if (isLight) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'dark');
+        themeBtn.textContent = '🌙';
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('theme', 'light');
+        themeBtn.textContent = '☀️';
+      }
+    });
+  }
+
   // Inject settings modal (works on every page that loads sheets.js)
   const overlay = document.createElement('div');
   overlay.id        = 'settings-modal';

@@ -240,6 +240,30 @@ async function loadYearly() {
       }
     }
 
+    // KPI strip
+    const totalIncome   = incomeArr.reduce((a, b) => a + b, 0);
+    const totalExpenses = expenseArr.reduce((a, b) => a + b, 0);
+    const totalProfit   = profitArr.reduce((a, b) => a + b, 0);
+    const avgSavings    = totalIncome > 0 ? (totalProfit / totalIncome * 100) : 0;
+
+    const kpiInc = document.getElementById('kpi-total-income');
+    const kpiExp = document.getElementById('kpi-total-expenses');
+    const kpiPro = document.getElementById('kpi-total-profit');
+    const kpiSav = document.getElementById('kpi-avg-savings');
+    if (kpiInc) kpiInc.textContent = formatShekel(totalIncome);
+    if (kpiExp) kpiExp.textContent = formatShekel(totalExpenses);
+    if (kpiPro) {
+      kpiPro.textContent = formatShekel(totalProfit);
+      kpiPro.className   = 'card-value ' + (totalProfit >= 0 ? 'income' : 'expense');
+    }
+    if (kpiSav) {
+      kpiSav.textContent = avgSavings.toFixed(1) + '%';
+      kpiSav.className   = 'card-value ' + (avgSavings >= 20 ? 'income' : avgSavings >= 10 ? 'accent' : 'expense');
+    }
+
+    const yearLabel = document.getElementById('yearly-chart-year');
+    if (yearLabel) yearLabel.textContent = currentYear;
+
     renderYearlySummaryTable(months, incomeArr, expenseArr, profitArr, rateArr);
     renderIncomeExpensesBar('yearly-income-expense-chart', MONTH_NAMES, incomeArr, expenseArr);
     renderSavingsRateLine('savings-rate-chart', MONTH_NAMES, rateArr);
