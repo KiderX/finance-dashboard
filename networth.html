@@ -136,7 +136,7 @@
             <thead>
               <tr>
                 <th>חודש</th><th>תיק השקעות</th><th>קרן כספית</th>
-                <th>חסכונות</th><th>סה"כ שווי נקי</th>
+                <th>חסכונות</th><th>סה"כ שווי נקי</th><th class="write-only"></th>
               </tr>
             </thead>
             <tbody id="nw-tbody"></tbody>
@@ -173,17 +173,20 @@ async function loadNetWorth() {
     // Columns: חודש | תיק השקעות | קרן כספית | חסכונות | סה"כ שווי נקי
     const rows = data.length > 1 ? data.slice(1) : [];
 
-    const latest = rows[rows.length - 1] || [];
-    const latestPortfolio = parseFloat(latest[1] || 0);
-    const latestCash      = parseFloat(latest[2] || 0);
-    const latestSavings   = parseFloat(latest[3] || 0);
-    const latestTotal     = parseFloat(latest[4] || 0) || (latestPortfolio + latestCash + latestSavings);
+    // Sum across all months for cumulative totals
+    const totalPortfolio = rows.reduce((s, r) => s + parseFloat(r[1] || 0), 0);
+    const totalCash      = rows.reduce((s, r) => s + parseFloat(r[2] || 0), 0);
+    const totalSavings   = rows.reduce((s, r) => s + parseFloat(r[3] || 0), 0);
+    const grandTotal     = rows.reduce((s, r) => {
+      const t = parseFloat(r[4] || 0);
+      return s + (t || parseFloat(r[1] || 0) + parseFloat(r[2] || 0) + parseFloat(r[3] || 0));
+    }, 0);
 
     document.getElementById('nw-stats').innerHTML = `
-      <div class="card" style="margin-bottom:0;"><div class="card-title">תיק השקעות</div><div class="card-value accent">${formatShekel(latestPortfolio)}</div></div>
-      <div class="card" style="margin-bottom:0;"><div class="card-title">קרן כספית</div><div class="card-value accent">${formatShekel(latestCash)}</div></div>
-      <div class="card" style="margin-bottom:0;"><div class="card-title">חסכונות</div><div class="card-value accent">${formatShekel(latestSavings)}</div></div>
-      <div class="card" style="margin-bottom:0;"><div class="card-title">סה"כ שווי נקי</div><div class="card-value income">${formatShekel(latestTotal)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">תיק השקעות</div><div class="card-value accent">${formatShekel(totalPortfolio)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">קרן כספית</div><div class="card-value accent">${formatShekel(totalCash)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">חסכונות</div><div class="card-value accent">${formatShekel(totalSavings)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">סה"כ שווי נקי</div><div class="card-value income">${formatShekel(grandTotal)}</div></div>
     `;
 
     const months    = rows.map(r => r[0] || '');
@@ -201,15 +204,35 @@ async function loadNetWorth() {
     const tbody = document.getElementById('nw-tbody');
     tbody.innerHTML = '';
     rows.forEach((r, i) => {
-      tbody.innerHTML += `
-        <tr>
-          <td>${escHtml(r[0]||'')}</td>
-          <td class="amount-positive">${formatShekel(portfolio[i])}</td>
-          <td class="amount-positive">${formatShekel(cashFund[i])}</td>
-          <td class="amount-positive">${formatShekel(savings[i])}</td>
-          <td class="amount-positive" style="font-weight:700;">${formatShekel(totals[i])}</td>
-        </tr>`;
+      const sheetRow = i + 2; // row 1 = header, data starts at row 2
+      const tr = document.createElement('tr');
+      tr.dataset.sheetRow = sheetRow;
+      tr.innerHTML = `
+        <td>${escHtml(r[0]||'')}</td>
+        <td class="amount-positive">${formatShekel(portfolio[i])}</td>
+        <td class="amount-positive">${formatShekel(cashFund[i])}</td>
+        <td class="amount-positive">${formatShekel(savings[i])}</td>
+        <td class="amount-positive" style="font-weight:700;">${formatShekel(totals[i])}</td>
+        <td class="write-only"><button class="btn btn-sm btn-outline-danger delete-nw-btn">מחק</button></td>`;
+      tbody.appendChild(tr);
     });
+
+    tbody.querySelectorAll('.delete-nw-btn').forEach(btn =>
+      btn.addEventListener('click', async e => {
+        const tr = e.target.closest('tr');
+        const rowNum = parseInt(tr.dataset.sheetRow);
+        btn.disabled = true;
+        btn.textContent = '...';
+        try {
+          await SheetsAPI.deleteRow(CONFIG.SHEETS.NET_WORTH, rowNum);
+          await loadNetWorth();
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = 'מחק';
+          alert('שגיאה במחיקה: ' + err.message);
+        }
+      })
+    );
 
     loading.classList.add('hidden');
     content.classList.remove('hidden');

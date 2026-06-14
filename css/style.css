@@ -587,6 +587,18 @@ tbody td { padding: 11px 14px; text-align: right; vertical-align: middle; }
   box-shadow: 0 0 18px rgba(245, 158, 11, 0.12);
 }
 
+.btn-outline-danger {
+  background: transparent;
+  color: var(--expense);
+  border: 1px solid rgba(244, 63, 94, 0.28);
+  font-family: Heebo, sans-serif;
+}
+.btn-outline-danger:hover {
+  background: rgba(244, 63, 94, 0.08);
+  border-color: var(--expense);
+  box-shadow: 0 0 14px rgba(244, 63, 94, 0.16);
+}
+
 .btn-sm { padding: 7px 14px; font-size: 0.8rem; }
 
 .btn:disabled {

@@ -385,11 +385,11 @@ function renderTransactions(transactions) {
       <td>${escHtml(date||'')}</td>
       <td>${escHtml(merchant||'')}</td>
       <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>
-      <td><span class="badge badge-info">${escHtml(category||'')}</span></td>
+      <td>${escHtml(category||'')}</td>
       <td class="text-muted">${escHtml(type||'')}</td>
       <td class="text-muted">${escHtml(notes||'')}</td>
       <td class="write-only">
-        <button class="btn btn-danger btn-sm delete-txn-btn" title="מחק עסקה">✕</button>
+        <button class="btn btn-sm btn-outline-danger delete-txn-btn" title="מחק עסקה">מחק</button>
       </td>`;
     tbody.appendChild(tr);
   });
