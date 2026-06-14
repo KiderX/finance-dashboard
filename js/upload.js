@@ -414,6 +414,13 @@ async function handleFiles(fileList) {
 function renderPreview(rows) {
   const tbody = document.getElementById('preview-tbody');
   document.getElementById('preview-count').textContent = `${rows.length} עסקאות`;
+
+  const total = rows.reduce((sum, row) => {
+    const amtRaw = getCol(row, 'סכום חיוב', 'סכום עסקה', 'סכום');
+    return sum + (parseFloat(String(amtRaw).replace(/[₪,\s]/g, '')) || 0);
+  }, 0);
+  document.getElementById('preview-total').textContent = formatShekel(total);
+
   tbody.innerHTML = '';
 
   rows.forEach((row, idx) => {
