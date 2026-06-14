@@ -1441,6 +1441,7 @@ body.sidebar-collapsed-mode .sidebar-footer .btn {
   padding: 0 !important;
   font-size: 0 !important;
   min-width: 0 !important;
+  justify-content: center !important;
 }
 body.sidebar-collapsed-mode .sidebar-footer .theme-toggle-btn,
 body.sidebar-collapsed-mode .sidebar-footer #settings-btn {
