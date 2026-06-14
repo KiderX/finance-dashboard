@@ -34,9 +34,21 @@ function addCustomCategory(name) {
 }
 
 function buildCategoryOptions(selected) {
-  return CONFIG.CATEGORIES.map(c =>
-    `<option value="${escHtml(c)}" ${c === selected ? 'selected' : ''}>${escHtml(c)}</option>`
-  ).join('') + `<option value="__new__">＋ קטגוריה חדשה...</option>`;
+  const allSubs = new Set(CONFIG.CATEGORY_GROUPS.flatMap(g => g.subs));
+  let html = CONFIG.CATEGORY_GROUPS.map(group => {
+    const opts = group.subs.map(c =>
+      `<option value="${escHtml(c)}" ${c === selected ? 'selected' : ''}>${escHtml(c)}</option>`
+    ).join('');
+    return `<optgroup label="${escHtml(group.name)}">${opts}</optgroup>`;
+  }).join('');
+  const extras = CONFIG.CATEGORIES.filter(c => !allSubs.has(c));
+  if (extras.length > 0) {
+    html += `<optgroup label="— אחר —">${extras.map(c =>
+      `<option value="${escHtml(c)}" ${c === selected ? 'selected' : ''}>${escHtml(c)}</option>`
+    ).join('')}</optgroup>`;
+  }
+  html += `<option value="__new__">＋ קטגוריה חדשה...</option>`;
+  return html;
 }
 
 function handleCatChange(select, rowIdx) {

@@ -113,8 +113,6 @@ async function saveIncome(allIncomeData) {
 
 // ── Render expenses by category ───────────────────────────
 function renderExpenses(transactions) {
-  // Tally every category that appears in the actual data — not filtered by CONFIG.CATEGORIES,
-  // so old rows with renamed categories (e.g. 'רכב', 'הוצאות שטופות') still show up.
   const catTotals = {};
   transactions.forEach(row => {
     const amount = parseFloat(row[2] || 0);
@@ -124,34 +122,53 @@ function renderExpenses(transactions) {
 
   const tbody = document.getElementById('expenses-table-body');
   tbody.innerHTML = '';
-  let total = 0;
+  let grandTotal = 0;
+  const shownCats = new Set();
 
-  // Show categories in CONFIG.CATEGORIES order first, then any legacy categories from old data
-  const ordered = [
-    ...CONFIG.CATEGORIES.filter(c => catTotals[c]),
-    ...Object.keys(catTotals).filter(c => !CONFIG.CATEGORIES.includes(c)),
-  ];
+  // Render each parent group as a bold header followed by indented sub-category rows
+  CONFIG.CATEGORY_GROUPS.forEach(group => {
+    const groupTotal = group.subs.reduce((sum, sub) => sum + (catTotals[sub] || 0), 0);
+    if (groupTotal === 0) return;
+    grandTotal += groupTotal;
 
-  ordered.forEach(cat => {
-    const amt = catTotals[cat] || 0;
-    if (amt === 0) return;
-    total += amt;
+    const headerTr = document.createElement('tr');
+    headerTr.className = 'category-group-header';
+    headerTr.innerHTML = `
+      <td>${escHtml(group.name)}</td>
+      <td class="${groupTotal < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(groupTotal)}</td>`;
+    tbody.appendChild(headerTr);
+
+    group.subs.forEach(sub => {
+      shownCats.add(sub);
+      const amt = catTotals[sub] || 0;
+      if (amt === 0) return;
+      const tr = document.createElement('tr');
+      tr.className = 'category-sub-row';
+      tr.innerHTML = `
+        <td>${escHtml(sub)}</td>
+        <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+
+  // Legacy / ungrouped categories from existing sheet data
+  Object.keys(catTotals).forEach(cat => {
+    if (shownCats.has(cat) || catTotals[cat] === 0) return;
+    const amt = catTotals[cat];
+    grandTotal += amt;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${escHtml(cat)}</td><td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>`;
+    tr.innerHTML = `
+      <td>${escHtml(cat)}</td>
+      <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>`;
     tbody.appendChild(tr);
   });
 
-  document.getElementById('expenses-total-cell').textContent = formatShekel(total);
-  document.getElementById('stat-expenses').textContent = formatShekel(total);
-  window._dashExpenses = total;
+  document.getElementById('expenses-total-cell').textContent = formatShekel(grandTotal);
+  document.getElementById('stat-expenses').textContent = formatShekel(grandTotal);
+  window._dashExpenses = grandTotal;
   updateProfitStats();
 
-  renderIncomeExpensesBar(
-    'income-expense-chart',
-    [currentMonth],
-    [window._dashIncome || 0],
-    [total]
-  );
+  renderIncomeExpensesBar('income-expense-chart', [currentMonth], [window._dashIncome || 0], [grandTotal]);
 }
 
 // ── Stats calculations ────────────────────────────────────
@@ -295,9 +312,21 @@ function addCustomCategory(name) {
 }
 
 function buildCategoryOptions(selected) {
-  return CONFIG.CATEGORIES.map(c =>
-    `<option value="${escHtml(c)}" ${c === selected ? 'selected' : ''}>${escHtml(c)}</option>`
-  ).join('') + `<option value="__new__">＋ קטגוריה חדשה...</option>`;
+  const allSubs = new Set(CONFIG.CATEGORY_GROUPS.flatMap(g => g.subs));
+  let html = CONFIG.CATEGORY_GROUPS.map(group => {
+    const opts = group.subs.map(c =>
+      `<option value="${escHtml(c)}" ${c === selected ? 'selected' : ''}>${escHtml(c)}</option>`
+    ).join('');
+    return `<optgroup label="${escHtml(group.name)}">${opts}</optgroup>`;
+  }).join('');
+  const extras = CONFIG.CATEGORIES.filter(c => !allSubs.has(c));
+  if (extras.length > 0) {
+    html += `<optgroup label="— אחר —">${extras.map(c =>
+      `<option value="${escHtml(c)}" ${c === selected ? 'selected' : ''}>${escHtml(c)}</option>`
+    ).join('')}</optgroup>`;
+  }
+  html += `<option value="__new__">＋ קטגוריה חדשה...</option>`;
+  return html;
 }
 
 function openManualEntryModal() {
