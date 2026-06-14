@@ -311,6 +311,7 @@ function renderSavingsRateLine(canvasId, months, rates) {
   opts.scales.y.min = 0;
   opts.scales.y.suggestedMax = 100;
   opts.animation = { duration: 900, easing: 'easeOutCubic' };
+  opts.plugins.legend.display = false;  // replaced by static HTML dot in yearly.html
   opts.plugins.tooltip.callbacks = {
     label: (c) => `חיסכון: ${c.parsed.y.toFixed(1)}%`,
   };
