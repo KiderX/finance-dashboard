@@ -423,11 +423,41 @@ tbody td { padding: 11px 14px; text-align: right; vertical-align: middle; }
 .income-display-val     { color: var(--income);    font-weight: 700; }
 .allocation-display-val { color: var(--gold-lite);  font-weight: 700; }
 
-/* ── Total row ───────────────────────────────────────────── */
+/* ── Total row — premium fintech summary ────────────────── */
 .total-row td {
   font-weight: 800;
-  background: rgba(245, 158, 11, 0.07) !important;
-  border-top: 1px solid rgba(245, 158, 11, 0.18);
+  background: linear-gradient(
+    to left,
+    rgba(245, 158, 11, 0.13) 0%,
+    rgba(245, 158, 11, 0.04) 65%,
+    transparent 100%
+  ) !important;
+  border-top: 2px solid rgba(245, 158, 11, 0.32) !important;
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+.total-row td:first-child {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.total-row td:not(:first-child) {
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+/* Gold gradient text for the dashboard 2-column total cells */
+#income-total-cell,
+#expenses-total-cell,
+#allocation-total-cell {
+  background: linear-gradient(135deg, #FCD34D 0%, #F59E0B 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  font-size: 0.95rem;
+  letter-spacing: -0.3px;
 }
 
 /* ── Category hierarchy ──────────────────────────────────── */
@@ -1225,9 +1255,24 @@ select option { background: #0A1020; color: var(--text); }
 [data-theme="light"] td { color: var(--text); }
 
 [data-theme="light"] .total-row td {
-  background: rgba(245,158,11,0.05) !important;
-  border-top-color: rgba(245,158,11,0.12);
+  background: linear-gradient(
+    to left,
+    rgba(245,158,11,0.09) 0%,
+    rgba(245,158,11,0.02) 100%
+  ) !important;
+  border-top-color: rgba(245,158,11,0.22) !important;
   color: var(--text);
+}
+[data-theme="light"] .total-row td:first-child {
+  color: var(--text-muted);
+}
+[data-theme="light"] #income-total-cell,
+[data-theme="light"] #expenses-total-cell,
+[data-theme="light"] #allocation-total-cell {
+  background: linear-gradient(135deg, #D97706 0%, #92400E 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
 }
 
 [data-theme="light"] .category-group-header td {
