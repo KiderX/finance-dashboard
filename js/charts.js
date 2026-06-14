@@ -295,8 +295,10 @@ function renderCategoryDonut(canvasId, labels, data, legendContainerId) {
 }
 
 /**
- * Renders a line chart showing savings rate per month.
- * Points are colour-coded: green >20%, gold 10–20%, rose <10%.
+ * Renders a smooth area line chart for monthly savings rate.
+ * Line and fill both use a live vertical gradient: green (>20%) → gold (10-20%) → red (<10%).
+ * Points are hidden at rest; hover reveals a colour-coded dot.
+ * Dashed threshold lines mark the 10% and 20% zone boundaries.
  * @param {string} canvasId
  * @param {string[]} months
  * @param {number[]} rates
@@ -304,44 +306,96 @@ function renderCategoryDonut(canvasId, labels, data, legendContainerId) {
  */
 function renderSavingsRateLine(canvasId, months, rates) {
   const canvas = prepareCanvas(canvasId);
-  const ctx    = canvas.getContext('2d');
   const opts   = defaultOptions();
   opts.scales  = defaultScales((v) => `${v.toFixed(0)}%`);
   opts.scales.y.min = 0;
   opts.scales.y.suggestedMax = 100;
+  opts.animation = { duration: 900, easing: 'easeOutCubic' };
   opts.plugins.tooltip.callbacks = {
     label: (c) => `חיסכון: ${c.parsed.y.toFixed(1)}%`,
   };
 
-  const pointColors = rates.map(savingsRateColor);
+  /*
+   * Computes zone-aware gradients for both the line stroke and area fill.
+   * Runs on every render so positions stay accurate after resize.
+   */
+  const zoneGradients = {
+    id: 'zoneGradients',
+    beforeDraw(chart) {
+      const { ctx: c, chartArea, scales: { y } } = chart;
+      if (!chartArea || !y) return;
+      const { top, bottom } = chartArea;
+      const range = (y.max - y.min) || 1;
+      const p20   = Math.max(0, Math.min(1, (y.max - 20) / range));
+      const p10   = Math.max(0, Math.min(1, (y.max - 10) / range));
+
+      const line = c.createLinearGradient(0, top, 0, bottom);
+      line.addColorStop(0,                       '#10B981');
+      line.addColorStop(Math.max(0, p20 - 0.06), '#10B981');
+      line.addColorStop(Math.min(1, p20 + 0.06), '#F59E0B');
+      line.addColorStop(Math.max(0, p10 - 0.06), '#F59E0B');
+      line.addColorStop(Math.min(1, p10 + 0.06), '#F43F5E');
+      line.addColorStop(1,                        '#F43F5E');
+
+      const fill = c.createLinearGradient(0, top, 0, bottom);
+      fill.addColorStop(0,                       'rgba(16,185,129,0.38)');
+      fill.addColorStop(Math.max(0, p20 - 0.01), 'rgba(16,185,129,0.28)');
+      fill.addColorStop(Math.min(1, p20 + 0.01), 'rgba(245,158,11,0.26)');
+      fill.addColorStop(Math.max(0, p10 - 0.01), 'rgba(245,158,11,0.20)');
+      fill.addColorStop(Math.min(1, p10 + 0.01), 'rgba(244,63,94,0.28)');
+      fill.addColorStop(1,                        'rgba(244,63,94,0.04)');
+
+      chart.data.datasets[0].borderColor    = line;
+      chart.data.datasets[0].backgroundColor = fill;
+    },
+  };
+
+  /* Draws dashed threshold lines at 20% (green) and 10% (red) below the data. */
+  const thresholdLines = {
+    id: 'thresholdLines',
+    beforeDatasetsDraw(chart) {
+      const { ctx: c, chartArea, scales: { y } } = chart;
+      if (!chartArea || !y) return;
+      const { left, right } = chartArea;
+      c.save();
+      [
+        { val: 20, color: 'rgba(16,185,129,0.22)' },
+        { val: 10, color: 'rgba(244,63,94,0.22)'  },
+      ].forEach(({ val, color }) => {
+        const py = y.getPixelForValue(val);
+        c.strokeStyle = color;
+        c.lineWidth   = 1;
+        c.setLineDash([5, 5]);
+        c.beginPath();
+        c.moveTo(left, py);
+        c.lineTo(right, py);
+        c.stroke();
+      });
+      c.restore();
+    },
+  };
 
   return new Chart(canvas, {
     type: 'line',
     data: {
       labels: months,
-      datasets: [
-        {
-          label: 'אחוז חיסכון',
-          data: rates,
-          borderColor: CHART_COLORS.gold,
-          borderWidth: 2.5,
-          backgroundColor: (context) => {
-            const { chartArea } = context.chart;
-            if (!chartArea) return 'rgba(245,158,11,0.18)';
-            return makeGradient(ctx, chartArea, '#F59E0B', 0.28, 0.02);
-          },
-          pointBackgroundColor: pointColors,
-          pointBorderColor: '#050B18',
-          pointBorderWidth: 2,
-          pointRadius: 6,
-          pointHoverRadius: 9,
-          pointHoverBorderWidth: 2,
-          tension: 0.45,
-          fill: true,
-        },
-      ],
+      datasets: [{
+        label:                     'אחוז חיסכון',
+        data:                      rates,
+        borderColor:               CHART_COLORS.gold,  // overridden by zoneGradients
+        backgroundColor:           'transparent',       // overridden by zoneGradients
+        borderWidth:               2.5,
+        pointRadius:               0,
+        pointHoverRadius:          7,
+        pointHoverBackgroundColor: rates.map(savingsRateColor),
+        pointHoverBorderColor:     '#050B18',
+        pointHoverBorderWidth:     2,
+        tension:                   0.6,
+        fill:                      true,
+      }],
     },
     options: opts,
+    plugins: [zoneGradients, thresholdLines],
   });
 }
 
