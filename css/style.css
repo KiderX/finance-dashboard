@@ -377,6 +377,7 @@ a:hover { color: #FDE68A; text-decoration: none; }
 }
 
 .stats-grid .card { margin-bottom: 0; }
+.stats-grid .card-value { font-size: 1.75rem; letter-spacing: -1px; }
 
 .dashboard-grid {
   display: grid;
@@ -1002,7 +1003,8 @@ select option { background: #0A1020; color: var(--text); }
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
   .login-card { padding: 32px 20px; }
-  .card-value { font-size: 2rem; letter-spacing: -1px; }
+  .card-value { font-size: 1.6rem; letter-spacing: -0.5px; }
+  .stats-grid .card-value { font-size: 1.5rem; letter-spacing: -0.5px; }
 }
 
 /* ═══════════════════════════════════════════════════════════
