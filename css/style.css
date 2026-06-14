@@ -424,24 +424,29 @@ tbody td { padding: 11px 14px; text-align: right; vertical-align: middle; }
 .allocation-display-val { color: var(--gold-lite);  font-weight: 700; }
 
 /* ── Total row — premium fintech summary ────────────────── */
-.total-row td {
-  font-weight: 800;
+/* Gradient lives on the <tr> so it spans the full row width,
+   not one per cell (which causes stripes in multi-column tables) */
+.total-row {
   background: linear-gradient(
     to left,
     rgba(245, 158, 11, 0.13) 0%,
-    rgba(245, 158, 11, 0.04) 65%,
+    rgba(245, 158, 11, 0.05) 55%,
     transparent 100%
-  ) !important;
-  border-top: 2px solid rgba(245, 158, 11, 0.32) !important;
+  );
+}
+.total-row td {
+  font-weight: 800;
+  background: transparent !important;
+  border-top: 2px solid rgba(245, 158, 11, 0.3) !important;
   padding-top: 14px !important;
   padding-bottom: 14px !important;
 }
 .total-row td:first-child {
-  font-size: 0.68rem;
+  font-size: 0.73rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
 }
 .total-row td:not(:first-child) {
   font-size: 0.92rem;
@@ -1254,12 +1259,15 @@ select option { background: #0A1020; color: var(--text); }
 [data-theme="light"] tbody tr:hover { background: rgba(245,158,11,0.04) !important; }
 [data-theme="light"] td { color: var(--text); }
 
-[data-theme="light"] .total-row td {
+[data-theme="light"] .total-row {
   background: linear-gradient(
     to left,
     rgba(245,158,11,0.09) 0%,
     rgba(245,158,11,0.02) 100%
-  ) !important;
+  );
+}
+[data-theme="light"] .total-row td {
+  background: transparent !important;
   border-top-color: rgba(245,158,11,0.22) !important;
   color: var(--text);
 }
