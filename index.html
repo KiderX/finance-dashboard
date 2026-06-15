@@ -123,17 +123,10 @@
           return;
         }
 
-        const view  = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS)
-          .setIncludeFolders(false);
-        const appId = CONFIG.CLIENT_ID.split('-')[0];
-
         _picker = new google.picker.PickerBuilder()
-          .addView(view)
+          .addView(google.picker.ViewId.SPREADSHEETS)
           .setOAuthToken(token)
           .setDeveloperKey(CONFIG.API_KEY)
-          .setAppId(appId)
-          .setLocale('iw')
-          .setTitle('בחר גיליון')
           .setCallback(pickerCallback)
           .build();
 
@@ -144,19 +137,12 @@
     }
 
     function pickerCallback(data) {
-      const action = data[google.picker.Response.ACTION];
-      if (action === google.picker.Action.PICKED) {
-        const doc  = data[google.picker.Response.DOCUMENTS][0];
-        const id   = doc[google.picker.Document.ID];
-        const name = doc[google.picker.Document.NAME];
+      if (data.action === 'picked' && data.docs && data.docs[0]) {
         if (_picker) _picker.setVisible(false);
-        const btn = document.getElementById('pick-btn');
-        btn.textContent = `✓ ${name}`;
-        btn.disabled = true;
-        saveConfig({ spreadsheetId: id });
-        setTimeout(() => { window.location.href = 'dashboard.html'; }, 600);
+        saveConfig({ spreadsheetId: data.docs[0].id });
+        window.location.href = 'dashboard.html';
       }
-      if (action === google.picker.Action.CANCEL) {
+      if (data.action === 'cancel') {
         if (_picker) _picker.setVisible(false);
       }
     }
