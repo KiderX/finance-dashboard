@@ -139,7 +139,7 @@
             <thead>
               <tr>
                 <th>חודש</th><th>תיק השקעות</th><th>קרן כספית</th>
-                <th>חסכונות</th><th>סה"כ הוספה</th><th class="write-only"></th>
+                <th>חסכונות</th><th>ערך</th><th class="write-only"></th>
               </tr>
             </thead>
             <tbody id="nw-tbody"></tbody>
@@ -248,9 +248,11 @@ async function loadNetWorth() {
         }
       }
       if (manual) {
-        cumPortfolio += manual.portfolio;
-        cumCashFund  += manual.cashFund;
-        cumSavings   += manual.savings;
+        // Manual entry is a point-in-time SNAPSHOT, not an increment.
+        // Non-zero fields set the running cumulative; zero fields carry forward unchanged.
+        if (manual.portfolio) cumPortfolio = manual.portfolio;
+        if (manual.cashFund)  cumCashFund  = manual.cashFund;
+        if (manual.savings)   cumSavings   = manual.savings;
         historyRows.push({
           month,
           portfolio: manual.portfolio,

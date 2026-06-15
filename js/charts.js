@@ -520,6 +520,7 @@ function renderNetWorthStackedArea(canvasId, months, portfolio, cashFund, saving
     borderWidth: 2,
     pointRadius: 0,
     pointHoverRadius: 5,
+    pointStyle: 'circle',  // forces legend to show a dot, not a filled-area rectangle
     tension: 0.45,
     fill: true,
   });
