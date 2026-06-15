@@ -61,22 +61,25 @@
 
     <!-- Entry form -->
     <div class="card write-only hidden" id="add-form">
-      <div class="card-title">רישום שווי נקי חודשי</div>
+      <div class="card-title">הוספה ידנית לחודש</div>
+      <p class="text-muted" style="font-size:0.83rem;margin-bottom:12px;">
+        הסכומים מתווספים לחישוב האוטומטי מפיזור הרווחים — לא מחליפים אותו.
+      </p>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
         <div class="form-group">
           <label>חודש (MM/YYYY)</label>
           <input type="text" id="nw-month" placeholder="MM/YYYY" />
         </div>
         <div class="form-group">
-          <label>תיק השקעות (₪)</label>
+          <label>תיק השקעות — הוספה ידנית (₪)</label>
           <input type="number" id="nw-portfolio" step="1" placeholder="0" />
         </div>
         <div class="form-group">
-          <label>קרן כספית (₪)</label>
+          <label>קרן כספית — הוספה ידנית (₪)</label>
           <input type="number" id="nw-cashfund" step="1" placeholder="0" />
         </div>
         <div class="form-group">
-          <label>חסכונות (₪)</label>
+          <label>חסכונות — הוספה ידנית (₪)</label>
           <input type="number" id="nw-savings" step="1" placeholder="0" />
         </div>
       </div>
@@ -216,29 +219,38 @@ async function loadNetWorth() {
       };
     });
 
+    // Both allocation and manual entries are ADDITIVE — neither overrides the other.
+    // Each month's values are the running cumulative sum of all prior additions.
+    // Manual entries carry forward just like allocation entries.
     let cumPortfolio = 0, cumCashFund = 0, cumSavings = 0;
     const display = allMonths.map(month => {
-      const add = allocByMonth[month];
+      const add    = allocByMonth[month];
+      const manual = manualMap[month];
+
       if (add) {
         cumPortfolio += add.investments;
         cumCashFund  += add.cashFund;
         cumSavings   += add.savings;
       }
-      const manual = manualMap[month];
       if (manual) {
-        // Manual override = authoritative snapshot for this month.
-        // ALSO reset the cumulative baseline so subsequent months accumulate
-        // on top of this known real-world value (not from allocation-only zero).
-        cumPortfolio = manual.portfolio;
-        cumCashFund  = manual.cashFund;
-        cumSavings   = manual.savings;
-        return { month, portfolio: manual.portfolio, cashFund: manual.cashFund,
-                 savings: manual.savings, total: manual.total,
-                 source: 'manual', sheetRow: manual.sheetRow };
+        cumPortfolio += manual.portfolio;
+        cumCashFund  += manual.cashFund;
+        cumSavings   += manual.savings;
       }
-      return { month, portfolio: cumPortfolio, cashFund: cumCashFund,
-               savings: cumSavings, total: cumPortfolio + cumCashFund + cumSavings,
-               source: 'auto', sheetRow: null };
+
+      const hasAuto   = !!add;
+      const hasManual = !!manual;
+      const source    = hasAuto && hasManual ? 'both' : hasManual ? 'manual' : 'auto';
+
+      return {
+        month,
+        portfolio: cumPortfolio,
+        cashFund:  cumCashFund,
+        savings:   cumSavings,
+        total:     cumPortfolio + cumCashFund + cumSavings,
+        source,
+        sheetRow: manual?.sheetRow ?? null,
+      };
     });
 
     // Stat cards — latest month's values
@@ -264,20 +276,26 @@ async function loadNetWorth() {
     // History table
     const tbody = document.getElementById('nw-tbody');
     tbody.innerHTML = '';
+    const SOURCE_BADGE = {
+      auto:   `<span style="font-size:0.68rem;background:var(--primary);color:#ecf0f1;padding:1px 6px;border-radius:3px;vertical-align:middle;">אוטומטי</span>`,
+      manual: `<span style="font-size:0.68rem;background:var(--accent);color:#000;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;">ידני</span>`,
+      both:   `<span style="font-size:0.68rem;background:var(--primary);color:#ecf0f1;padding:1px 6px;border-radius:3px;vertical-align:middle;">אוטומטי</span>` +
+              `<span style="font-size:0.68rem;background:var(--accent);color:#000;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;margin-right:3px;">+ידני</span>`,
+    };
+
     display.forEach(item => {
-      const isManual = item.source === 'manual';
-      const sourceBadge = isManual
-        ? `<span style="font-size:0.68rem;background:var(--accent);color:#000;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;margin-right:4px;">ידני</span>`
-        : `<span style="font-size:0.68rem;background:var(--primary);color:#ecf0f1;padding:1px 6px;border-radius:3px;vertical-align:middle;margin-right:4px;">אוטומטי</span>`;
+      const hasManual = item.sheetRow !== null;
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${escHtml(item.month)} ${sourceBadge}</td>
+        <td style="white-space:nowrap;">${escHtml(item.month)}
+          <span style="margin-right:6px;">${SOURCE_BADGE[item.source] || ''}</span>
+        </td>
         <td class="amount-positive">${formatShekel(item.portfolio)}</td>
         <td class="amount-positive">${formatShekel(item.cashFund)}</td>
         <td class="amount-positive">${formatShekel(item.savings)}</td>
         <td class="amount-positive" style="font-weight:700;">${formatShekel(item.total)}</td>
-        <td class="write-only">${isManual
-          ? `<button class="btn btn-sm btn-outline-danger delete-nw-btn" data-nw-row="${item.sheetRow}">מחק</button>`
+        <td class="write-only">${hasManual
+          ? `<button class="btn btn-sm btn-outline-danger delete-nw-btn" title="מחק רישום ידני" data-nw-row="${item.sheetRow}">מחק ידני</button>`
           : ''}</td>`;
       tbody.appendChild(tr);
     });
