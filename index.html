@@ -107,6 +107,18 @@
 
     let _picker = null;
 
+    // Global so the Picker iframe can always find it
+    window._pickerCallback = function(data) {
+      const debugEl = document.getElementById('picker-error');
+      debugEl.innerHTML = '<div style="font-size:0.7rem;word-break:break-all;color:#F59E0B;margin-top:8px;">callback: ' + JSON.stringify(data) + '</div>';
+
+      if (data.action === 'picked' && data.docs && data.docs[0]) {
+        if (_picker) _picker.setVisible(false);
+        saveConfig({ spreadsheetId: data.docs[0].id });
+        window.location.href = 'dashboard.html';
+      }
+    };
+
     function openPicker() {
       const btn     = document.getElementById('pick-btn');
       const errorEl = document.getElementById('picker-error');
@@ -127,24 +139,13 @@
           .addView(google.picker.ViewId.SPREADSHEETS)
           .setOAuthToken(token)
           .setDeveloperKey(CONFIG.API_KEY)
-          .setCallback(pickerCallback)
+          .setCallback(window._pickerCallback)
           .build();
 
         _picker.setVisible(true);
         btn.disabled    = false;
         btn.textContent = 'פתח את Google Drive ובחר גיליון';
       });
-    }
-
-    function pickerCallback(data) {
-      if (data.action === 'picked' && data.docs && data.docs[0]) {
-        if (_picker) _picker.setVisible(false);
-        saveConfig({ spreadsheetId: data.docs[0].id });
-        window.location.href = 'dashboard.html';
-      }
-      if (data.action === 'cancel') {
-        if (_picker) _picker.setVisible(false);
-      }
     }
   </script>
 </body>
