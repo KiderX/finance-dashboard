@@ -26,7 +26,9 @@ function isConfigured() {
 function saveConfig({ spreadsheetId, clientId, emails }) {
   localStorage.setItem(CFG_KEYS.SPREADSHEET_ID, spreadsheetId.trim());
   localStorage.setItem(CFG_KEYS.CLIENT_ID,      clientId.trim());
-  localStorage.setItem(CFG_KEYS.EMAILS,         JSON.stringify(emails.map(e => e.trim()).filter(Boolean)));
+  localStorage.setItem(CFG_KEYS.EMAILS,         JSON.stringify(
+    emails.map(e => typeof e === 'string' ? e.trim() : e).filter(Boolean)
+  ));
 }
 
 /** Wipes config from localStorage */
@@ -41,7 +43,7 @@ const CONFIG = {
   get ALLOWED_EMAILS() { return JSON.parse(localStorage.getItem(CFG_KEYS.EMAILS) || '[]'); },
 
   /** OAuth scope for full read+write access */
-  SCOPES: 'https://www.googleapis.com/auth/spreadsheets email',
+  SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive email',
 
   /** OAuth scope for read-only access */
   SCOPES_READONLY: 'https://www.googleapis.com/auth/spreadsheets.readonly email',

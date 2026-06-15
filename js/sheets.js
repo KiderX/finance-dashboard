@@ -318,6 +318,30 @@ const SheetsAPI = (() => {
     return handleResponse(res);
   }
 
+  // ── Google Drive API — share / unshare the spreadsheet ───────────────────
+  async function driveReq(method, path, body) {
+    const url  = `https://www.googleapis.com/drive/v3/files/${CONFIG.SPREADSHEET_ID}${path}`;
+    const opts = { method, headers: authHeaders() };
+    if (body) opts.body = JSON.stringify(body);
+    const res  = await fetch(url, opts);
+    if (res.status === 204) return null;
+    return handleResponse(res);
+  }
+
+  async function addPermission(email, role = 'writer') {
+    return driveReq('POST', '/permissions?sendNotificationEmail=false', {
+      type: 'user', role, emailAddress: email,
+    });
+  }
+
+  async function removePermission(email) {
+    const data = await driveReq('GET', '/permissions?fields=permissions(id,emailAddress)', null);
+    const perm = (data.permissions || [])
+      .find(p => (p.emailAddress || '').toLowerCase() === email.toLowerCase());
+    if (!perm) return;
+    await driveReq('DELETE', `/permissions/${perm.id}`, null);
+  }
+
   // Public API
   return {
     getRange,
@@ -331,6 +355,8 @@ const SheetsAPI = (() => {
     initializeSpreadsheet,
     ensureYearTab,
     migrateTransactionsIfNeeded,
+    addPermission,
+    removePermission,
   };
 })();
 
@@ -415,6 +441,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <div style="display:flex;gap:8px;margin-bottom:10px;">
           <input type="email" id="settings-new-email" class="input" placeholder="new@gmail.com"
                  style="flex:1;" dir="ltr" />
+          <select id="settings-new-role" class="input" style="width:110px;">
+            <option value="writer">עריכה</option>
+            <option value="reader">צפייה</option>
+          </select>
           <button class="btn btn-primary" id="settings-add-email-btn" style="white-space:nowrap;">הזמן</button>
         </div>
         <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:8px;">משתמשים קיימים</div>
@@ -458,28 +488,40 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Render email list ──────────────────────────────────────────────────────
   function renderEmailList() {
     const container = document.getElementById('settings-email-list');
-    const emails    = CONFIG.ALLOWED_EMAILS;
+    const entries   = CONFIG.ALLOWED_EMAILS; // array of email strings or {email,role} objects
     container.innerHTML = '';
-    if (emails.length === 0) {
+    if (entries.length === 0) {
       container.innerHTML = '<p class="text-muted" style="font-size:0.83rem;">אין משתמשים מורשים</p>';
       return;
     }
-    emails.forEach(email => {
+    entries.forEach(entry => {
+      const email    = typeof entry === 'string' ? entry : entry.email;
+      const role     = typeof entry === 'string' ? 'writer' : entry.role;
+      const roleLabel = role === 'reader' ? 'צפייה' : 'עריכה';
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:8px;';
       row.innerHTML = `
         <span style="flex:1;font-size:0.85rem;direction:ltr;unicode-bidi:isolate;">${email}</span>
+        <span style="font-size:0.75rem;color:var(--text-muted);white-space:nowrap;">${roleLabel}</span>
         <button class="btn btn-sm btn-outline remove-email-btn"
                 style="border-color:var(--expense);color:var(--expense);padding:2px 8px;"
                 data-email="${email}">✕</button>`;
       container.appendChild(row);
     });
     container.querySelectorAll('.remove-email-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const updated = CONFIG.ALLOWED_EMAILS.filter(e => e !== btn.dataset.email);
-        saveConfig({ spreadsheetId: CONFIG.SPREADSHEET_ID, clientId: CONFIG.CLIENT_ID, emails: updated });
-        renderEmailList();
-        showUsersMsg('✓ הוסר', false);
+      btn.addEventListener('click', async () => {
+        const email   = btn.dataset.email;
+        btn.disabled  = true; btn.textContent = '...';
+        try {
+          await SheetsAPI.removePermission(email);
+          const updated = CONFIG.ALLOWED_EMAILS.filter(e => e !== email);
+          saveConfig({ spreadsheetId: CONFIG.SPREADSHEET_ID, clientId: CONFIG.CLIENT_ID, emails: updated });
+          renderEmailList();
+          showUsersMsg('✓ הגישה הוסרה', false);
+        } catch (err) {
+          showUsersMsg(`שגיאה: ${err.message}`, true);
+          btn.disabled = false; btn.textContent = '✕';
+        }
       });
     });
   }
@@ -500,25 +542,33 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${base}setup.html#invite=${payload}`;
   }
 
-  document.getElementById('settings-add-email-btn').addEventListener('click', () => {
+  document.getElementById('settings-add-email-btn').addEventListener('click', async () => {
     const input = document.getElementById('settings-new-email');
     const email = input.value.trim();
     if (!email || !email.includes('@')) { showUsersMsg('כתובת מייל לא תקינה', true); return; }
     const emails = CONFIG.ALLOWED_EMAILS;
-    if (emails.includes(email)) { showUsersMsg('כתובת זו כבר קיימת', true); return; }
+    if (emails.some(e => (typeof e === 'string' ? e : e.email) === email)) { showUsersMsg('כתובת זו כבר קיימת', true); return; }
 
-    const updated = [...emails, email];
-    saveConfig({ spreadsheetId: CONFIG.SPREADSHEET_ID, clientId: CONFIG.CLIENT_ID, emails: updated });
-    input.value = '';
-    renderEmailList();
-
-    // Generate invite link with the updated list and copy to clipboard
-    const link = generateInviteLink();
-    navigator.clipboard.writeText(link).then(() => {
-      showUsersMsg(`✓ ${email} נוסף — קישור הזמנה הועתק ללוח`, false);
-    }).catch(() => {
-      showUsersMsg(`✓ ${email} נוסף`, false);
-    });
+    const role = document.getElementById('settings-new-role').value;
+    const btn  = document.getElementById('settings-add-email-btn');
+    btn.disabled = true; btn.textContent = 'מוסיף...';
+    try {
+      await SheetsAPI.addPermission(email, role);
+      const updated = [...emails, { email, role }];
+      saveConfig({ spreadsheetId: CONFIG.SPREADSHEET_ID, clientId: CONFIG.CLIENT_ID, emails: updated });
+      input.value = '';
+      renderEmailList();
+      const link = generateInviteLink();
+      navigator.clipboard.writeText(link).then(() => {
+        showUsersMsg(`✓ ${email} נוסף לגיליון — קישור הזמנה הועתק ללוח`, false);
+      }).catch(() => {
+        showUsersMsg(`✓ ${email} נוסף לגיליון`, false);
+      });
+    } catch (err) {
+      showUsersMsg(`שגיאה: ${err.message}`, true);
+    } finally {
+      btn.disabled = false; btn.textContent = 'הזמן';
+    }
   });
 
   // ── Sheet init ─────────────────────────────────────────────────────────────

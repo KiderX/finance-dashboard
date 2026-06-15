@@ -65,7 +65,9 @@ const AuthManager = (() => {
    */
   function isEmailAllowed(email) {
     if (!email) return false;
-    return CONFIG.ALLOWED_EMAILS.includes(email);
+    return CONFIG.ALLOWED_EMAILS.some(e =>
+      typeof e === 'string' ? e === email : e.email === email
+    );
   }
 
   /**
