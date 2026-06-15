@@ -41,10 +41,10 @@ const CONFIG = {
   get ALLOWED_EMAILS() { return JSON.parse(localStorage.getItem(CFG_KEYS.EMAILS) || '[]'); },
 
   /** OAuth scope for full read+write access */
-  SCOPES: 'https://www.googleapis.com/auth/spreadsheets',
+  SCOPES: 'https://www.googleapis.com/auth/spreadsheets email',
 
   /** OAuth scope for read-only access */
-  SCOPES_READONLY: 'https://www.googleapis.com/auth/spreadsheets.readonly',
+  SCOPES_READONLY: 'https://www.googleapis.com/auth/spreadsheets.readonly email',
 
   /** Google Sheets API v4 base URL */
   SHEETS_API_BASE: 'https://sheets.googleapis.com/v4/spreadsheets',
