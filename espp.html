@@ -118,11 +118,11 @@
             <thead>
               <tr>
                 <th>תאריך מכירה</th><th>מחיר מניה ($)</th><th>כמות</th>
-                <th>סכום ברוטו (₪)</th><th>מס (₪)</th><th>סכום נטו (₪)</th><th>הערות</th>
+                <th>סכום ברוטו (₪)</th><th>מס (₪)</th><th>סכום נטו (₪)</th><th>הערות</th><th class="write-only"></th>
               </tr>
             </thead>
             <tbody id="espp-tbody"></tbody>
-            <tfoot><tr class="total-row" id="espp-tfoot"><td colspan="7"></td></tr></tfoot>
+            <tfoot><tr class="total-row" id="espp-tfoot"><td colspan="8"></td></tr></tfoot>
           </table>
         </div>
       </div>
@@ -175,20 +175,22 @@ async function loadESPP() {
     // Table
     const tbody = document.getElementById('espp-tbody');
     tbody.innerHTML = '';
-    rows.forEach(r => {
+    rows.forEach((r, i) => {
       const gross = parseFloat(r[3] || 0);
       const tax   = parseFloat(r[4] || 0);
       const net   = parseFloat(r[5] || 0);
-      tbody.innerHTML += `
-        <tr>
-          <td>${escHtml(r[0]||'')}</td>
-          <td>${escHtml(r[1]||'')}</td>
-          <td>${escHtml(r[2]||'')}</td>
-          <td class="amount-positive">${formatShekel(gross)}</td>
-          <td class="amount-negative">${formatShekel(tax)}</td>
-          <td class="amount-positive">${formatShekel(net)}</td>
-          <td class="text-muted">${escHtml(r[6]||'')}</td>
-        </tr>`;
+      const tr = document.createElement('tr');
+      tr.dataset.sheetRow = i + 1; // 0-indexed for Google Sheets batchUpdate
+      tr.innerHTML = `
+        <td>${escHtml(r[0]||'')}</td>
+        <td>${escHtml(r[1]||'')}</td>
+        <td>${escHtml(r[2]||'')}</td>
+        <td class="amount-positive">${formatShekel(gross)}</td>
+        <td class="amount-negative">${formatShekel(tax)}</td>
+        <td class="amount-positive">${formatShekel(net)}</td>
+        <td class="text-muted">${escHtml(r[6]||'')}</td>
+        <td class="write-only"><button class="btn btn-sm btn-outline-danger delete-espp-btn">מחק</button></td>`;
+      tbody.appendChild(tr);
     });
 
     document.getElementById('espp-tfoot').innerHTML = `
@@ -196,7 +198,7 @@ async function loadESPP() {
       <td class="amount-positive">${formatShekel(totalGross)}</td>
       <td class="amount-negative">${formatShekel(totalTax)}</td>
       <td class="amount-positive">${formatShekel(totalNet)}</td>
-      <td></td>`;
+      <td></td><td class="write-only"></td>`;
 
     loading.classList.add('hidden');
     content.classList.remove('hidden');
@@ -253,6 +255,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('cancel-form-btn').addEventListener('click', () =>
     document.getElementById('add-form').classList.add('hidden'));
   document.getElementById('save-espp-btn').addEventListener('click', saveESPP);
+
+  // Delete ESPP row — event delegation so it survives table re-renders
+  document.getElementById('espp-tbody').addEventListener('click', async e => {
+    const btn = e.target.closest('.delete-espp-btn');
+    if (!btn || btn.disabled) return;
+    const tr = btn.closest('tr');
+    if (!tr) return;
+    const rowNum = parseInt(tr.dataset.sheetRow);
+    if (isNaN(rowNum)) return;
+    btn.disabled = true;
+    btn.textContent = '...';
+    try {
+      await SheetsAPI.deleteRow(CONFIG.SHEETS.ESPP, rowNum);
+      await loadESPP();
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'מחק';
+      const errEl = document.createElement('div');
+      errEl.className = 'text-danger';
+      errEl.style.cssText = 'font-size:0.72rem;margin-top:4px;';
+      errEl.textContent = err.message;
+      btn.parentElement.appendChild(errEl);
+    }
+  });
 
   await loadESPP();
 });
