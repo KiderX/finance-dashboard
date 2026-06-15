@@ -38,10 +38,10 @@
         <h1 class="login-title" style="font-size:1.4rem;">בחר את הגיליון שלך</h1>
         <p class="login-subtitle">בחר את גיליון ה-Google Sheets שבו יישמרו הנתונים</p>
         <div id="picker-error"></div>
-        <button id="pick-btn" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;margin-top:24px;">
+        <button id="pick-btn" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;margin-top:12px;">
           פתח את Google Drive ובחר גיליון
         </button>
-        <p class="text-muted mt-16" style="font-size:0.78rem;line-height:1.6;">
+        <p class="text-muted" style="font-size:0.78rem;line-height:1.6;margin-top:12px;">
           פעולה זו מעניקה לאפליקציה גישה לגיליון הנבחר בלבד.<br/>
           תצטרך לעשות זאת פעם אחת בלבד.
         </p>
@@ -105,9 +105,11 @@
       document.getElementById('pick-btn').addEventListener('click', openPicker);
     }
 
+    let _picker = null;
+
     function openPicker() {
-      const btn       = document.getElementById('pick-btn');
-      const errorEl   = document.getElementById('picker-error');
+      const btn     = document.getElementById('pick-btn');
+      const errorEl = document.getElementById('picker-error');
       btn.disabled    = true;
       btn.textContent = 'פותח...';
       errorEl.innerHTML = '';
@@ -121,12 +123,11 @@
           return;
         }
 
-        const view = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS)
+        const view  = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS)
           .setIncludeFolders(false);
-
         const appId = CONFIG.CLIENT_ID.split('-')[0];
 
-        const picker = new google.picker.PickerBuilder()
+        _picker = new google.picker.PickerBuilder()
           .addView(view)
           .setOAuthToken(token)
           .setDeveloperKey(CONFIG.API_KEY)
@@ -136,17 +137,27 @@
           .setCallback(pickerCallback)
           .build();
 
-        picker.setVisible(true);
+        _picker.setVisible(true);
         btn.disabled    = false;
         btn.textContent = 'פתח את Google Drive ובחר גיליון';
       });
     }
 
     function pickerCallback(data) {
-      if (data.action === google.picker.Action.PICKED) {
-        const file = data.docs[0];
-        saveConfig({ spreadsheetId: file.id });
-        window.location.href = 'dashboard.html';
+      const action = data[google.picker.Response.ACTION];
+      if (action === google.picker.Action.PICKED) {
+        const doc  = data[google.picker.Response.DOCUMENTS][0];
+        const id   = doc[google.picker.Document.ID];
+        const name = doc[google.picker.Document.NAME];
+        if (_picker) _picker.setVisible(false);
+        const btn = document.getElementById('pick-btn');
+        btn.textContent = `✓ ${name}`;
+        btn.disabled = true;
+        saveConfig({ spreadsheetId: id });
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 600);
+      }
+      if (action === google.picker.Action.CANCEL) {
+        if (_picker) _picker.setVisible(false);
       }
     }
   </script>
