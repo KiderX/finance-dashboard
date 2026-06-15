@@ -412,21 +412,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <hr style="border-color:var(--border);margin:20px 0;" />
 
-      <!-- User management -->
-      <div class="mb-0">
-        <div style="font-weight:600;margin-bottom:10px;">הזמן משתמש</div>
-        <p class="text-muted" style="font-size:0.83rem;margin-bottom:12px;">
-          הוסף מייל ולחץ <strong>הזמן</strong> — המייל יתווסף לרשימה וקישור ההזמנה יועתק ללוח.
-          שלח את הקישור למשתמש החדש. הקלקה עליו מגדירה את הדפדפן שלו אוטומטית.
+      <!-- User management (owner-only section) -->
+      <div class="mb-0" id="settings-users-section">
+        <div style="font-weight:600;margin-bottom:10px;">ניהול משתמשים</div>
+        <p class="text-muted" style="font-size:0.83rem;margin-bottom:12px;" id="settings-users-desc">
+          טוען רשימת משתמשים...
         </p>
-        <div style="display:flex;gap:8px;margin-bottom:10px;">
-          <input type="email" id="settings-new-email" class="input" placeholder="new@gmail.com"
-                 style="flex:1;" dir="ltr" />
-          <select id="settings-new-role" class="input" style="width:110px;">
-            <option value="writer">עריכה</option>
-            <option value="reader">צפייה</option>
-          </select>
-          <button class="btn btn-primary" id="settings-add-email-btn" style="white-space:nowrap;">הזמן</button>
+        <div id="settings-invite-controls" style="display:none;">
+          <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <input type="email" id="settings-new-email" class="input" placeholder="new@gmail.com"
+                   style="flex:1;" dir="ltr" />
+            <select id="settings-new-role" class="input" style="width:110px;">
+              <option value="writer">עריכה</option>
+              <option value="reader">צפייה</option>
+            </select>
+            <button class="btn btn-primary" id="settings-add-email-btn" style="white-space:nowrap;">הזמן</button>
+          </div>
         </div>
         <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:8px;">משתמשים קיימים</div>
         <div id="settings-email-list" style="display:flex;flex-direction:column;gap:6px;"></div>
@@ -466,44 +467,74 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('settings-close-btn').addEventListener('click', close);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 
-  // ── Render email list ──────────────────────────────────────────────────────
-  function renderEmailList() {
-    const container = document.getElementById('settings-email-list');
-    const entries   = CONFIG.ALLOWED_EMAILS; // array of email strings or {email,role} objects
-    container.innerHTML = '';
-    if (entries.length === 0) {
-      container.innerHTML = '<p class="text-muted" style="font-size:0.83rem;">אין משתמשים מורשים</p>';
+  // ── Render permissions list (Drive API) ───────────────────────────────────
+  async function renderEmailList() {
+    const container   = document.getElementById('settings-email-list');
+    const desc        = document.getElementById('settings-users-desc');
+    const inviteCtrl  = document.getElementById('settings-invite-controls');
+    const currentUser = AuthManager.getUserEmail();
+    const myRole      = AuthManager.getUserRole(); // 'owner' | 'writer' | 'reader'
+    const isOwner     = myRole === 'owner';
+
+    container.innerHTML = '<p class="text-muted" style="font-size:0.83rem;">טוען...</p>';
+
+    // Only owners can add/remove users
+    if (inviteCtrl) inviteCtrl.style.display = isOwner ? '' : 'none';
+    if (desc) {
+      desc.textContent = isOwner
+        ? 'הוסף מייל ולחץ הזמן — הגישה תינתן בגיליון וקישור הגדרה יועתק ללוח.'
+        : 'רק הבעלים יכול לנהל משתמשים.';
+    }
+
+    let permissions = [];
+    try {
+      const data = await driveReq('GET', '/permissions?fields=permissions(id,emailAddress,role,displayName)', null);
+      permissions = data?.permissions || [];
+    } catch (_) {
+      container.innerHTML = '<p class="text-muted" style="font-size:0.83rem;">לא ניתן לטעון רשימת משתמשים</p>';
       return;
     }
-    const currentUser = AuthManager.getUserEmail();
-    entries.forEach(entry => {
-      const email     = typeof entry === 'string' ? entry : entry.email;
-      const role      = typeof entry === 'string' ? 'writer' : entry.role;
-      const roleLabel = role === 'reader' ? 'צפייה' : 'עריכה';
-      const isMe      = email === currentUser;
+
+    container.innerHTML = '';
+    if (permissions.length === 0) {
+      container.innerHTML = '<p class="text-muted" style="font-size:0.83rem;">אין משתמשים</p>';
+      return;
+    }
+
+    const ROLE_LABEL = { owner: 'בעלים', writer: 'עריכה', reader: 'צפייה', commenter: 'תגובות' };
+
+    permissions.forEach(p => {
+      const email     = p.emailAddress || '';
+      const role      = p.role || 'reader';
+      const roleLabel = ROLE_LABEL[role] || role;
+      const isMe      = email.toLowerCase() === (currentUser || '').toLowerCase();
+      const isFileOwner = role === 'owner';
+
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 0;';
       row.innerHTML = `
-        <span style="flex:1;font-size:0.85rem;direction:ltr;unicode-bidi:isolate;">${email}</span>
-        <span style="font-size:0.75rem;color:var(--text-muted);white-space:nowrap;">${roleLabel}</span>
+        <span style="flex:1;font-size:0.85rem;direction:ltr;unicode-bidi:isolate;">${email || '—'}</span>
+        ${isFileOwner
+          ? `<span style="font-size:0.72rem;background:var(--accent);color:#000;padding:2px 8px;border-radius:4px;font-weight:600;">בעלים</span>`
+          : `<span style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;">${roleLabel}</span>`}
         ${isMe
-          ? `<span style="font-size:0.75rem;color:var(--text-muted);padding:2px 8px;">אני</span>`
-          : `<button class="btn btn-sm btn-outline remove-email-btn"
+          ? `<span style="font-size:0.72rem;color:var(--text-muted);padding:2px 6px;">אני</span>`
+          : ''}
+        ${(isOwner && !isFileOwner && email)
+          ? `<button class="btn btn-sm btn-outline remove-email-btn"
                      style="border-color:var(--expense);color:var(--expense);padding:2px 8px;"
-                     data-email="${email}">✕</button>`}`;
+                     data-email="${email}" data-perm-id="${p.id}">✕</button>`
+          : ''}`;
       container.appendChild(row);
     });
+
     container.querySelectorAll('.remove-email-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const email   = btn.dataset.email;
-        btn.disabled  = true; btn.textContent = '...';
+        const email = btn.dataset.email;
+        btn.disabled = true; btn.textContent = '...';
         try {
           await SheetsAPI.removePermission(email);
-          const updated = CONFIG.ALLOWED_EMAILS.filter(e =>
-            (typeof e === 'string' ? e : e.email) !== email
-          );
-          saveConfig({ emails: updated });
-          renderEmailList();
+          await renderEmailList();
           showUsersMsg('✓ הגישה הוסרה', false);
         } catch (err) {
           showUsersMsg(`שגיאה: ${err.message}`, true);
@@ -523,40 +554,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const payload = btoa(JSON.stringify({
       spreadsheetId: CONFIG.SPREADSHEET_ID,
       clientId:      CONFIG.CLIENT_ID,
-      emails:        CONFIG.ALLOWED_EMAILS,
     }));
     const base = window.location.href.replace(/[^/]*$/, '');
     return `${base}setup.html#invite=${payload}`;
   }
 
-  document.getElementById('settings-add-email-btn').addEventListener('click', async () => {
-    const input = document.getElementById('settings-new-email');
-    const email = input.value.trim();
-    if (!email || !email.includes('@')) { showUsersMsg('כתובת מייל לא תקינה', true); return; }
-    const emails = CONFIG.ALLOWED_EMAILS;
-    if (emails.some(e => (typeof e === 'string' ? e : e.email) === email)) { showUsersMsg('כתובת זו כבר קיימת', true); return; }
+  // Add-user button — only rendered for owners
+  const addEmailBtn = document.getElementById('settings-add-email-btn');
+  if (addEmailBtn) {
+    addEmailBtn.addEventListener('click', async () => {
+      const input = document.getElementById('settings-new-email');
+      const email = input.value.trim();
+      if (!email || !email.includes('@')) { showUsersMsg('כתובת מייל לא תקינה', true); return; }
 
-    const role = document.getElementById('settings-new-role').value;
-    const btn  = document.getElementById('settings-add-email-btn');
-    btn.disabled = true; btn.textContent = 'מוסיף...';
-    try {
-      await SheetsAPI.addPermission(email, role);
-      const updated = [...emails, { email, role }];
-      saveConfig({ emails: updated });
-      input.value = '';
-      renderEmailList();
-      const link = generateInviteLink();
-      navigator.clipboard.writeText(link).then(() => {
-        showUsersMsg(`✓ ${email} נוסף לגיליון — קישור הזמנה הועתק ללוח`, false);
-      }).catch(() => {
-        showUsersMsg(`✓ ${email} נוסף לגיליון`, false);
-      });
-    } catch (err) {
-      showUsersMsg(`שגיאה: ${err.message}`, true);
-    } finally {
-      btn.disabled = false; btn.textContent = 'הזמן';
-    }
-  });
+      const role = document.getElementById('settings-new-role').value;
+      addEmailBtn.disabled = true; addEmailBtn.textContent = 'מוסיף...';
+      try {
+        await SheetsAPI.addPermission(email, role);
+        input.value = '';
+        await renderEmailList();
+        const link = generateInviteLink();
+        navigator.clipboard.writeText(link).then(() => {
+          showUsersMsg(`✓ ${email} נוסף לגיליון — קישור הזמנה הועתק ללוח`, false);
+        }).catch(() => {
+          showUsersMsg(`✓ ${email} נוסף לגיליון`, false);
+        });
+      } catch (err) {
+        showUsersMsg(`שגיאה: ${err.message}`, true);
+      } finally {
+        addEmailBtn.disabled = false; addEmailBtn.textContent = 'הזמן';
+      }
+    });
+  }
 
   // ── Sheet init ─────────────────────────────────────────────────────────────
   document.getElementById('settings-setup-btn').addEventListener('click', async () => {

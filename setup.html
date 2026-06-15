@@ -61,24 +61,6 @@
       unicode-bidi: isolate;
       display: inline-block;
     }
-    .email-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-    .email-row  { display: flex; gap: 8px; align-items: center; }
-    .email-row input { flex: 1; }
-    .btn-remove {
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text-muted);
-      width: 34px;
-      height: 34px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .btn-remove:hover { border-color: var(--expense); color: var(--expense); }
     .setup-divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
     #setup-error { margin-top: 12px; }
   </style>
@@ -117,18 +99,6 @@
         </p>
       </div>
 
-      <hr class="setup-divider" />
-
-      <!-- Emails -->
-      <div class="setup-section">
-        <div class="setup-label">כתובות מייל מורשות</div>
-        <div class="email-list" id="email-list"></div>
-        <button class="btn btn-outline" id="add-email-btn" style="width:100%;margin-top:4px;">
-          + הוסף כתובת מייל
-        </button>
-        <p class="setup-help">רק כתובות אלו יוכלו להתחבר לאפליקציה.</p>
-      </div>
-
       <div id="setup-error"></div>
 
       <button class="btn btn-primary w-full" id="save-btn" style="padding:14px;font-size:1rem;">
@@ -150,7 +120,6 @@
         saveConfig({
           spreadsheetId: cfg.spreadsheetId,
           clientId:      cfg.clientId,
-          emails:        cfg.emails,
         });
         window.location.href = 'index.html';
       } catch (_) {
@@ -164,27 +133,6 @@
       window.location.href = 'index.html';
     }
 
-    // ── Email rows ────────────────────────────────────────────────────────────
-    const emailList = document.getElementById('email-list');
-
-    function addEmailRow(value = '') {
-      const row = document.createElement('div');
-      row.className = 'email-row';
-      row.innerHTML = `
-        <input type="email" class="input email-input" placeholder="your@gmail.com"
-               value="${value}" dir="ltr" style="flex:1;" />
-        <button class="btn-remove" title="הסר">✕</button>`;
-      row.querySelector('.btn-remove').addEventListener('click', () => {
-        if (emailList.children.length > 1) row.remove();
-      });
-      emailList.appendChild(row);
-      if (!value) row.querySelector('input').focus();
-    }
-
-    addEmailRow(); // start with one empty row
-
-    document.getElementById('add-email-btn').addEventListener('click', () => addEmailRow());
-
     // ── Save ──────────────────────────────────────────────────────────────────
     document.getElementById('save-btn').addEventListener('click', () => {
       const errorEl      = document.getElementById('setup-error');
@@ -192,11 +140,9 @@
 
       const rawSheet = document.getElementById('input-sheet-id').value.trim();
       const clientId = document.getElementById('input-client-id').value.trim();
-      const emails   = Array.from(document.querySelectorAll('.email-input'))
-                         .map(i => i.value.trim()).filter(Boolean);
 
       // Accept full URL or bare ID
-      const urlMatch    = rawSheet.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+      const urlMatch      = rawSheet.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
       const spreadsheetId = urlMatch ? urlMatch[1] : rawSheet;
 
       if (!spreadsheetId) {
@@ -205,11 +151,8 @@
       if (!clientId) {
         errorEl.innerHTML = '<div class="error-msg">יש להזין OAuth Client ID</div>'; return;
       }
-      if (emails.length === 0) {
-        errorEl.innerHTML = '<div class="error-msg">יש להזין לפחות כתובת מייל אחת</div>'; return;
-      }
 
-      saveConfig({ spreadsheetId, clientId, emails });
+      saveConfig({ spreadsheetId, clientId });
       window.location.href = 'index.html';
     });
   </script>

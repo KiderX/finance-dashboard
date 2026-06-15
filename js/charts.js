@@ -427,16 +427,16 @@ function renderNetWorthLine(canvasId, months, values) {
         borderColor: CHART_COLORS.income,
         backgroundColor: (context) => {
           const { chartArea } = context.chart;
-          if (!chartArea) return 'rgba(16,185,129,0.15)';
+          if (!chartArea) return 'rgba(16,185,129,0.18)';
           return makeAreaGradient(ctx, chartArea, '#10B981');
         },
-        borderWidth: 2.5,
+        borderWidth: 3,
         pointBackgroundColor: CHART_COLORS.income,
         pointBorderColor: '#050B18',
         pointBorderWidth: 2,
-        pointRadius: 5,
-        pointHoverRadius: 8,
-        tension: 0.55,
+        pointRadius: 0,       // hidden by default — gives a continuous wave look
+        pointHoverRadius: 6,  // visible on hover
+        tension: 0.45,
         fill: true,
       }],
     },
@@ -496,43 +496,32 @@ function renderNetWorthStackedArea(canvasId, months, portfolio, cashFund, saving
   const canvas = prepareCanvas(canvasId);
   const opts   = defaultOptions();
   opts.scales  = defaultScales((v) => formatShekel(v));
+  opts.scales.y.stacked = true;
   opts.plugins.legend.display = false;
   opts.plugins.tooltip.callbacks = {
     label: (c) => `${c.dataset.label}: ${formatShekel(c.parsed.y)}`,
   };
 
+  const lineDataset = (label, data, color, alphaFill) => ({
+    label,
+    data,
+    borderColor: color,
+    backgroundColor: color.replace(')', `, ${alphaFill})`).replace('rgb', 'rgba'),
+    borderWidth: 2,
+    pointRadius: 0,
+    pointHoverRadius: 5,
+    tension: 0.45,
+    fill: true,
+  });
+
   return new Chart(canvas, {
-    type: 'bar',
+    type: 'line',
     data: {
       labels: months,
       datasets: [
-        {
-          label: 'תיק השקעות',
-          data: portfolio,
-          backgroundColor: 'rgba(14, 165, 233, 0.82)',
-          borderRadius: 6,
-          borderSkipped: false,
-          barPercentage: 0.8,
-          categoryPercentage: 0.72,
-        },
-        {
-          label: 'קרן כספית',
-          data: cashFund,
-          backgroundColor: 'rgba(16, 185, 129, 0.82)',
-          borderRadius: 6,
-          borderSkipped: false,
-          barPercentage: 0.8,
-          categoryPercentage: 0.72,
-        },
-        {
-          label: 'חסכונות',
-          data: savings,
-          backgroundColor: 'rgba(139, 92, 246, 0.82)',
-          borderRadius: 6,
-          borderSkipped: false,
-          barPercentage: 0.8,
-          categoryPercentage: 0.72,
-        },
+        lineDataset('תיק השקעות', portfolio, 'rgb(14, 165, 233)',  0.55),
+        lineDataset('קרן כספית',  cashFund,  'rgb(16, 185, 129)', 0.50),
+        lineDataset('חסכונות',    savings,   'rgb(139, 92, 246)', 0.45),
       ],
     },
     options: opts,

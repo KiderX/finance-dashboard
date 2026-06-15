@@ -11,20 +11,33 @@
  * Handles Google OAuth 2.0 login, token storage, and access control.
  */
 const AuthManager = (() => {
-  const SESSION_KEY = 'finance_oauth_token';
-  const SESSION_EMAIL_KEY = 'finance_user_email';
+  const SESSION_KEY        = 'finance_oauth_token';
+  const SESSION_EMAIL_KEY  = 'finance_user_email';
   const SESSION_EXPIRY_KEY = 'finance_token_expiry';
+  const SESSION_ROLE_KEY   = 'finance_user_role'; // 'owner' | 'writer' | 'reader'
 
   let tokenClient = null;
   let resolveTokenPromise = null;
   let rejectTokenPromise = null;
 
   /**
-   * Checks whether the current URL has the ?readonly=true parameter.
+   * Returns the authenticated user's Drive role on the spreadsheet.
+   * Stored in sessionStorage after login.
+   * @returns {'owner'|'writer'|'reader'|null}
+   */
+  function getUserRole() {
+    return sessionStorage.getItem(SESSION_ROLE_KEY);
+  }
+
+  /**
+   * Checks whether the current URL has the ?readonly=true parameter OR
+   * whether the logged-in user has a 'reader' Drive role.
    * @returns {boolean} True if read-only mode is active.
    */
   function isReadOnly() {
-    return new URLSearchParams(window.location.search).get('readonly') === 'true';
+    if (new URLSearchParams(window.location.search).get('readonly') === 'true') return true;
+    const role = getUserRole();
+    return role === 'reader';
   }
 
   /**
@@ -55,19 +68,50 @@ const AuthManager = (() => {
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(SESSION_EMAIL_KEY);
     sessionStorage.removeItem(SESSION_EXPIRY_KEY);
+    sessionStorage.removeItem(SESSION_ROLE_KEY);
   }
 
   /**
-   * Validates that the given email is allowed to access the app.
-   * In readonly mode, also checks READONLY_ALLOWED_EMAILS.
-   * @param {string} email - The user's email to validate.
-   * @returns {boolean} True if access is permitted.
+   * Determines the user's Drive role on the spreadsheet.
+   * Returns 'owner', 'writer', or 'reader'. Throws if no access.
+   * @param {string} accessToken - Valid OAuth access token.
+   * @param {string} email - The authenticated user's email (for owner detection).
+   * @returns {Promise<'owner'|'writer'|'reader'>}
    */
-  function isEmailAllowed(email) {
-    if (!email) return false;
-    return CONFIG.ALLOWED_EMAILS.some(e =>
-      typeof e === 'string' ? e === email : e.email === email
+  async function checkDriveRole(accessToken, email) {
+    const headers = { Authorization: `Bearer ${accessToken}` };
+    const fileId  = CONFIG.SPREADSHEET_ID;
+
+    // Check basic file access and edit capability
+    const capRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?fields=capabilities(canEdit)`,
+      { headers }
     );
+    if (capRes.status === 403 || capRes.status === 404) {
+      throw new Error('אין לך גישה לגיליון זה. בקש מהבעלים לשתף אותו איתך.');
+    }
+    if (!capRes.ok) {
+      throw new Error('שגיאה בבדיקת הרשאות. נסה שוב.');
+    }
+    const capData = await capRes.json();
+    const canEdit = capData.capabilities?.canEdit === true;
+
+    // Try to fetch the permissions list to detect 'owner' role
+    try {
+      const permRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${fileId}/permissions?fields=permissions(emailAddress,role)`,
+        { headers }
+      );
+      if (permRes.ok) {
+        const permData = await permRes.json();
+        const myPerm = (permData.permissions || []).find(
+          p => (p.emailAddress || '').toLowerCase() === email.toLowerCase()
+        );
+        if (myPerm?.role === 'owner') return 'owner';
+      }
+    } catch (_) { /* ignore — fall through to capability-based detection */ }
+
+    return canEdit ? 'writer' : 'reader';
   }
 
   /**
@@ -107,7 +151,11 @@ const AuthManager = (() => {
    */
   function initTokenClient() {
     return new Promise((resolve) => {
-      const scope = isReadOnly() ? CONFIG.SCOPES_READONLY : CONFIG.SCOPES;
+      // Always request write scope — Drive server-side permissions enforce real access control.
+      // If ?readonly=true is in the URL (shared read-only link), use the readonly scope instead.
+      const scope = new URLSearchParams(window.location.search).get('readonly') === 'true'
+        ? CONFIG.SCOPES_READONLY
+        : CONFIG.SCOPES;
       tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CONFIG.CLIENT_ID,
         scope,
@@ -120,12 +168,8 @@ const AuthManager = (() => {
           }
           try {
             const email = await fetchUserEmail(tokenResponse.access_token);
-            if (!isEmailAllowed(email)) {
-              if (rejectTokenPromise) {
-                rejectTokenPromise(new Error(`הגישה נדחתה: ${email} אינה מורשית.`));
-              }
-              return;
-            }
+            const role  = await checkDriveRole(tokenResponse.access_token, email);
+            sessionStorage.setItem(SESSION_ROLE_KEY, role);
             saveSession(tokenResponse.access_token, email, tokenResponse.expires_in || 3600);
             if (resolveTokenPromise) {
               resolveTokenPromise(email);
@@ -174,7 +218,7 @@ const AuthManager = (() => {
 
     await initTokenClient();
 
-    // Apply read-only mode UI restrictions
+    // Apply read-only UI restrictions based on Drive role or ?readonly URL param
     if (isReadOnly()) {
       document.body.classList.add('readonly');
       document.querySelectorAll('.write-only').forEach((el) => {
@@ -226,7 +270,7 @@ const AuthManager = (() => {
     signOut,
     getToken,
     getUserEmail,
+    getUserRole,
     isReadOnly,
-    isEmailAllowed,
   };
 })();

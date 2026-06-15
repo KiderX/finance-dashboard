@@ -160,59 +160,119 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function parseMonth(monthStr) {
+  const [mm, yyyy] = (monthStr || '').split('/').map(Number);
+  return new Date(yyyy, mm - 1, 1).getTime();
+}
+
 async function loadNetWorth() {
-  const loading = document.getElementById('loading');
-  const content = document.getElementById('content');
+  const loading        = document.getElementById('loading');
+  const content        = document.getElementById('content');
   const errorContainer = document.getElementById('error-container');
   loading.classList.remove('hidden');
   content.classList.add('hidden');
   errorContainer.innerHTML = '';
 
   try {
-    const data = await SheetsAPI.getSheet(CONFIG.SHEETS.NET_WORTH);
-    // Columns: חודש | תיק השקעות | קרן כספית | חסכונות | סה"כ שווי נקי
-    const rows = data.length > 1 ? data.slice(1) : [];
+    // Fetch Allocation and NetWorth sheets in parallel
+    const [allocData, nwData] = await Promise.all([
+      SheetsAPI.getSheet(CONFIG.SHEETS.PROFIT_ALLOCATION),
+      SheetsAPI.getSheet(CONFIG.SHEETS.NET_WORTH),
+    ]);
 
-    // Sum across all months for cumulative totals
-    const totalPortfolio = rows.reduce((s, r) => s + parseFloat(r[1] || 0), 0);
-    const totalCash      = rows.reduce((s, r) => s + parseFloat(r[2] || 0), 0);
-    const totalSavings   = rows.reduce((s, r) => s + parseFloat(r[3] || 0), 0);
-    const grandTotal     = rows.reduce((s, r) => {
-      const t = parseFloat(r[4] || 0);
-      return s + (t || parseFloat(r[1] || 0) + parseFloat(r[2] || 0) + parseFloat(r[3] || 0));
-    }, 0);
+    // Allocation cols: חודש(0) | רווח(1) | עו"ש(2)→חסכונות | קרן כספית(3) | השקעות(4)→תיק השקעות
+    const allocRows = (allocData.length > 1 ? allocData.slice(1) : [])
+      .filter(r => r[0]);
 
-    document.getElementById('nw-stats').innerHTML = `
-      <div class="card" style="margin-bottom:0;"><div class="card-title">תיק השקעות</div><div class="card-value accent">${formatShekel(totalPortfolio)}</div></div>
-      <div class="card" style="margin-bottom:0;"><div class="card-title">קרן כספית</div><div class="card-value accent">${formatShekel(totalCash)}</div></div>
-      <div class="card" style="margin-bottom:0;"><div class="card-title">חסכונות</div><div class="card-value accent">${formatShekel(totalSavings)}</div></div>
-      <div class="card" style="margin-bottom:0;"><div class="card-title">סה"כ שווי נקי</div><div class="card-value income">${formatShekel(grandTotal)}</div></div>
-    `;
-
-    const months    = rows.map(r => r[0] || '');
-    const portfolio = rows.map(r => parseFloat(r[1] || 0));
-    const cashFund  = rows.map(r => parseFloat(r[2] || 0));
-    const savings   = rows.map(r => parseFloat(r[3] || 0));
-    const totals    = rows.map((r, i) => parseFloat(r[4] || 0) || portfolio[i] + cashFund[i] + savings[i]);
-
-    if (months.length > 0) {
-      renderNetWorthLine('nw-total-chart', months, totals);
-      renderNetWorthStackedArea('nw-breakdown-chart', months, portfolio, cashFund, savings);
+    // Manual overrides from NetWorth sheet: { month → { portfolio, cashFund, savings, total, sheetRow } }
+    const manualMap = {};
+    if (nwData.length > 1) {
+      nwData.slice(1).forEach((r, i) => {
+        if (!r[0]) return;
+        const p = parseFloat(r[1] || 0);
+        const c = parseFloat(r[2] || 0);
+        const s = parseFloat(r[3] || 0);
+        manualMap[r[0]] = {
+          portfolio: p, cashFund: c, savings: s,
+          total: parseFloat(r[4] || 0) || p + c + s,
+          sheetRow: i + 2, // 1-indexed, +1 for header
+        };
+      });
     }
 
-    // Table
+    // Build sorted unique month list (from both sources)
+    const allMonths = [...new Set([
+      ...allocRows.map(r => r[0]),
+      ...Object.keys(manualMap),
+    ])].sort((a, b) => parseMonth(a) - parseMonth(b));
+
+    // Calculate running cumulative from Allocation additions
+    const allocByMonth = {};
+    allocRows.forEach(r => {
+      allocByMonth[r[0]] = {
+        investments: parseFloat(r[4] || 0), // השקעות → תיק השקעות
+        cashFund:    parseFloat(r[3] || 0), // קרן כספית
+        savings:     parseFloat(r[2] || 0), // עו"ש → חסכונות
+      };
+    });
+
+    let cumPortfolio = 0, cumCashFund = 0, cumSavings = 0;
+    const display = allMonths.map(month => {
+      const add = allocByMonth[month];
+      if (add) {
+        cumPortfolio += add.investments;
+        cumCashFund  += add.cashFund;
+        cumSavings   += add.savings;
+      }
+      const manual = manualMap[month];
+      if (manual) {
+        return { month, portfolio: manual.portfolio, cashFund: manual.cashFund,
+                 savings: manual.savings, total: manual.total,
+                 source: 'manual', sheetRow: manual.sheetRow };
+      }
+      return { month, portfolio: cumPortfolio, cashFund: cumCashFund,
+               savings: cumSavings, total: cumPortfolio + cumCashFund + cumSavings,
+               source: 'auto', sheetRow: null };
+    });
+
+    // Stat cards — latest month's values
+    const latest = display[display.length - 1] || { portfolio: 0, cashFund: 0, savings: 0, total: 0 };
+    document.getElementById('nw-stats').innerHTML = `
+      <div class="card" style="margin-bottom:0;"><div class="card-title">תיק השקעות</div><div class="card-value accent">${formatShekel(latest.portfolio)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">קרן כספית</div><div class="card-value accent">${formatShekel(latest.cashFund)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">חסכונות</div><div class="card-value accent">${formatShekel(latest.savings)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">סה"כ שווי נקי</div><div class="card-value income">${formatShekel(latest.total)}</div></div>
+    `;
+
+    // Charts
+    if (display.length > 0) {
+      renderNetWorthLine('nw-total-chart', display.map(x => x.month), display.map(x => x.total));
+      renderNetWorthStackedArea('nw-breakdown-chart',
+        display.map(x => x.month),
+        display.map(x => x.portfolio),
+        display.map(x => x.cashFund),
+        display.map(x => x.savings)
+      );
+    }
+
+    // History table
     const tbody = document.getElementById('nw-tbody');
     tbody.innerHTML = '';
-    rows.forEach((r, i) => {
+    display.forEach(item => {
+      const isManual = item.source === 'manual';
+      const sourceBadge = isManual
+        ? `<span style="font-size:0.68rem;background:var(--accent);color:#000;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;margin-right:4px;">ידני</span>`
+        : `<span style="font-size:0.68rem;background:var(--primary);color:#ecf0f1;padding:1px 6px;border-radius:3px;vertical-align:middle;margin-right:4px;">אוטומטי</span>`;
       const tr = document.createElement('tr');
-      tr.dataset.sheetRow = i + 1; // 0-indexed for Google Sheets batchUpdate
       tr.innerHTML = `
-        <td>${escHtml(r[0]||'')}</td>
-        <td class="amount-positive">${formatShekel(portfolio[i])}</td>
-        <td class="amount-positive">${formatShekel(cashFund[i])}</td>
-        <td class="amount-positive">${formatShekel(savings[i])}</td>
-        <td class="amount-positive" style="font-weight:700;">${formatShekel(totals[i])}</td>
-        <td class="write-only"><button class="btn btn-sm btn-outline-danger delete-nw-btn">מחק</button></td>`;
+        <td>${escHtml(item.month)} ${sourceBadge}</td>
+        <td class="amount-positive">${formatShekel(item.portfolio)}</td>
+        <td class="amount-positive">${formatShekel(item.cashFund)}</td>
+        <td class="amount-positive">${formatShekel(item.savings)}</td>
+        <td class="amount-positive" style="font-weight:700;">${formatShekel(item.total)}</td>
+        <td class="write-only">${isManual
+          ? `<button class="btn btn-sm btn-outline-danger delete-nw-btn" data-nw-row="${item.sheetRow}">מחק</button>`
+          : ''}</td>`;
       tbody.appendChild(tr);
     });
 
@@ -285,13 +345,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('add-form').classList.add('hidden'));
   document.getElementById('save-nw-btn').addEventListener('click', saveNetWorth);
 
-  // Delete net worth row — event delegation so it survives table re-renders
+  // Delete manual net worth override — event delegation so it survives table re-renders
   document.getElementById('nw-tbody').addEventListener('click', async e => {
     const btn = e.target.closest('.delete-nw-btn');
     if (!btn || btn.disabled) return;
-    const tr = btn.closest('tr');
-    if (!tr) return;
-    const rowNum = parseInt(tr.dataset.sheetRow);
+    const rowNum = parseInt(btn.dataset.nwRow);
     if (isNaN(rowNum)) return;
     btn.disabled = true;
     btn.textContent = '...';

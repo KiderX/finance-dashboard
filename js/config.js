@@ -10,15 +10,14 @@
 const CFG_KEYS = {
   SPREADSHEET_ID: 'finance_spreadsheet_id',
   CLIENT_ID:      'finance_client_id',
-  EMAILS:         'finance_allowed_emails',
+  EMAILS:         'finance_allowed_emails', // legacy — no longer written, cleared on reconfigure
 };
 
 /** Returns true when all required config values are present in localStorage */
 function isConfigured() {
   return !!(
     localStorage.getItem(CFG_KEYS.SPREADSHEET_ID) &&
-    localStorage.getItem(CFG_KEYS.CLIENT_ID) &&
-    JSON.parse(localStorage.getItem(CFG_KEYS.EMAILS) || '[]').length > 0
+    localStorage.getItem(CFG_KEYS.CLIENT_ID)
   );
 }
 
@@ -26,12 +25,9 @@ function isConfigured() {
  * Persists config values to localStorage. Each key is optional —
  * only the keys you pass will be updated.
  */
-function saveConfig({ spreadsheetId, clientId, emails } = {}) {
+function saveConfig({ spreadsheetId, clientId } = {}) {
   if (spreadsheetId !== undefined) localStorage.setItem(CFG_KEYS.SPREADSHEET_ID, spreadsheetId.trim ? spreadsheetId.trim() : spreadsheetId);
   if (clientId  !== undefined)     localStorage.setItem(CFG_KEYS.CLIENT_ID, clientId.trim());
-  if (emails    !== undefined)     localStorage.setItem(CFG_KEYS.EMAILS, JSON.stringify(
-    emails.map(e => typeof e === 'string' ? e.trim() : e).filter(Boolean)
-  ));
 }
 
 /** Wipes config from localStorage */
@@ -43,12 +39,11 @@ function clearConfig() {
 const CONFIG = {
   get SPREADSHEET_ID() { return localStorage.getItem(CFG_KEYS.SPREADSHEET_ID) || ''; },
   get CLIENT_ID()      { return localStorage.getItem(CFG_KEYS.CLIENT_ID)      || ''; },
-  get ALLOWED_EMAILS() { return JSON.parse(localStorage.getItem(CFG_KEYS.EMAILS) || '[]'); },
 
-  /** OAuth scope for full read+write access */
+  /** OAuth scope — always request full access; Drive permissions enforce server-side restrictions */
   SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive email',
 
-  /** OAuth scope for read-only access */
+  /** OAuth scope for read-only access (used when ?readonly=true is set in URL) */
   SCOPES_READONLY: 'https://www.googleapis.com/auth/spreadsheets.readonly email',
 
   /** Google Sheets API v4 base URL */
