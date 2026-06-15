@@ -154,24 +154,6 @@ const SheetsAPI = (() => {
   }
 
   /**
-   * Converts a sheet's 2D values array into an array of plain objects.
-   * The first row is treated as headers.
-   * @param {string[][]} values - Raw 2D array from Sheets API.
-   * @returns {Object[]} Array of row objects keyed by header name.
-   */
-  function valuesToObjects(values) {
-    if (!values || values.length < 2) return [];
-    const [headers, ...rows] = values;
-    return rows.map((row) => {
-      const obj = {};
-      headers.forEach((header, i) => {
-        obj[header] = row[i] !== undefined ? row[i] : '';
-      });
-      return obj;
-    });
-  }
-
-  /**
    * Finds the row number (1-indexed) of a specific month in a sheet.
    * Assumes column A contains month strings in MM/YYYY format.
    * @param {string[][]} values - Raw sheet values.
@@ -349,7 +331,6 @@ const SheetsAPI = (() => {
     appendRows,
     updateRange,
     batchGet,
-    valuesToObjects,
     findMonthRow,
     deleteRow,
     initializeSpreadsheet,

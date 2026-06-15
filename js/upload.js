@@ -162,8 +162,6 @@ function normalizeCal2D(data2d, headerIdx, sourceName) {
   const rawHeaders = data2d[headerIdx].map(h =>
     stripMarks(String(h)).replace(/\n/g, ' ')
   );
-  console.log('[Cal] headers for', sourceName, ':', rawHeaders);
-
   function colIdx(...candidates) {
     for (const cand of candidates) {
       const i = rawHeaders.findIndex(h => h.includes(cand));
@@ -179,10 +177,7 @@ function normalizeCal2D(data2d, headerIdx, sourceName) {
   const branchIdx   = colIdx('ענף');
   const notesIdx    = colIdx('הערות');
 
-  console.log('[Cal] colIdx →', { dateIdx, merchantIdx, amountIdx, typeIdx, branchIdx, notesIdx });
-
   if (dateIdx === -1 || merchantIdx === -1 || amountIdx === -1) {
-    console.warn('[Cal] Missing required column(s) — skipping sheet', sourceName);
     return [];
   }
 
@@ -307,8 +302,6 @@ async function processExcelFile(file) {
   const buffer = await file.arrayBuffer();
   const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
 
-  console.log('[Cal] Sheet names:', wb.SheetNames);
-
   const allRows = [];
   const diag    = [];
 
@@ -322,20 +315,12 @@ async function processExcelFile(file) {
       return stripMarks(String(c === null || c === undefined ? '' : c));
     }));
 
-    // Log the first 6 rows so the console shows the raw structure
-    console.log(`[Cal] "${sheetName}" — ${data.length} rows. First 6:`);
-    data.slice(0, 6).forEach((row, i) =>
-      console.log(`  [${i}]`, row.map(c => c instanceof Date ? c.toISOString() : c))
-    );
-
     const headerIdx = findCalHeaderRow(strData);
-    console.log(`[Cal] "${sheetName}" header row index:`, headerIdx);
     diag.push(`${sheetName}:${data.length}r/h@${headerIdx}`);
 
     if (headerIdx === -1) continue;
 
     const rows = normalizeCal2D(data, headerIdx, sheetName);
-    console.log(`[Cal] "${sheetName}" → ${rows.length} transactions`);
     allRows.push(...rows);
   }
 
