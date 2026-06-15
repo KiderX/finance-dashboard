@@ -495,7 +495,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled  = true; btn.textContent = '...';
         try {
           await SheetsAPI.removePermission(email);
-          const updated = CONFIG.ALLOWED_EMAILS.filter(e => e !== email);
+          const updated = CONFIG.ALLOWED_EMAILS.filter(e =>
+            (typeof e === 'string' ? e : e.email) !== email
+          );
           saveConfig({ emails: updated });
           renderEmailList();
           showUsersMsg('✓ הגישה הוסרה', false);
