@@ -536,7 +536,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const payload = btoa(JSON.stringify({
       spreadsheetId: CONFIG.SPREADSHEET_ID,
       clientId:      CONFIG.CLIENT_ID,
-      apiKey:        CONFIG.API_KEY,
       emails:        CONFIG.ALLOWED_EMAILS,
     }));
     const base = window.location.href.replace(/[^/]*$/, '');

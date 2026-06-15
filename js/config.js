@@ -10,31 +10,25 @@
 const CFG_KEYS = {
   SPREADSHEET_ID: 'finance_spreadsheet_id',
   CLIENT_ID:      'finance_client_id',
-  API_KEY:        'finance_api_key',
   EMAILS:         'finance_allowed_emails',
 };
 
-/** Returns true when the minimum required config (clientId + emails) is present */
+/** Returns true when all required config values are present in localStorage */
 function isConfigured() {
   return !!(
+    localStorage.getItem(CFG_KEYS.SPREADSHEET_ID) &&
     localStorage.getItem(CFG_KEYS.CLIENT_ID) &&
     JSON.parse(localStorage.getItem(CFG_KEYS.EMAILS) || '[]').length > 0
   );
-}
-
-/** Returns true when the spreadsheet ID has been set (via Picker or invite link) */
-function isSpreadsheetSet() {
-  return !!localStorage.getItem(CFG_KEYS.SPREADSHEET_ID);
 }
 
 /**
  * Persists config values to localStorage. Each key is optional —
  * only the keys you pass will be updated.
  */
-function saveConfig({ spreadsheetId, clientId, apiKey, emails } = {}) {
+function saveConfig({ spreadsheetId, clientId, emails } = {}) {
   if (spreadsheetId !== undefined) localStorage.setItem(CFG_KEYS.SPREADSHEET_ID, spreadsheetId.trim ? spreadsheetId.trim() : spreadsheetId);
   if (clientId  !== undefined)     localStorage.setItem(CFG_KEYS.CLIENT_ID, clientId.trim());
-  if (apiKey    !== undefined)     localStorage.setItem(CFG_KEYS.API_KEY,   apiKey.trim());
   if (emails    !== undefined)     localStorage.setItem(CFG_KEYS.EMAILS, JSON.stringify(
     emails.map(e => typeof e === 'string' ? e.trim() : e).filter(Boolean)
   ));
@@ -49,11 +43,10 @@ function clearConfig() {
 const CONFIG = {
   get SPREADSHEET_ID() { return localStorage.getItem(CFG_KEYS.SPREADSHEET_ID) || ''; },
   get CLIENT_ID()      { return localStorage.getItem(CFG_KEYS.CLIENT_ID)      || ''; },
-  get API_KEY()        { return localStorage.getItem(CFG_KEYS.API_KEY)        || ''; },
   get ALLOWED_EMAILS() { return JSON.parse(localStorage.getItem(CFG_KEYS.EMAILS) || '[]'); },
 
   /** OAuth scope for full read+write access */
-  SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file email',
+  SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive email',
 
   /** OAuth scope for read-only access */
   SCOPES_READONLY: 'https://www.googleapis.com/auth/spreadsheets.readonly email',
