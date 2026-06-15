@@ -37,11 +37,6 @@
   <script>
     'use strict';
     document.addEventListener('DOMContentLoaded', () => {
-      if (!isConfigured()) {
-        window.location.href = 'setup.html';
-        return;
-      }
-
       if (AuthManager.getToken()) {
         window.location.href = 'dashboard.html';
         return;
