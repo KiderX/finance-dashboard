@@ -204,9 +204,8 @@ async function loadNetWorth() {
     const tbody = document.getElementById('nw-tbody');
     tbody.innerHTML = '';
     rows.forEach((r, i) => {
-      const sheetRow = i + 2; // row 1 = header, data starts at row 2
       const tr = document.createElement('tr');
-      tr.dataset.sheetRow = sheetRow;
+      tr.dataset.sheetRow = i + 1; // 0-indexed for Google Sheets batchUpdate
       tr.innerHTML = `
         <td>${escHtml(r[0]||'')}</td>
         <td class="amount-positive">${formatShekel(portfolio[i])}</td>
@@ -216,23 +215,6 @@ async function loadNetWorth() {
         <td class="write-only"><button class="btn btn-sm btn-outline-danger delete-nw-btn">מחק</button></td>`;
       tbody.appendChild(tr);
     });
-
-    tbody.querySelectorAll('.delete-nw-btn').forEach(btn =>
-      btn.addEventListener('click', async e => {
-        const tr = e.target.closest('tr');
-        const rowNum = parseInt(tr.dataset.sheetRow);
-        btn.disabled = true;
-        btn.textContent = '...';
-        try {
-          await SheetsAPI.deleteRow(CONFIG.SHEETS.NET_WORTH, rowNum);
-          await loadNetWorth();
-        } catch (err) {
-          btn.disabled = false;
-          btn.textContent = 'מחק';
-          alert('שגיאה במחיקה: ' + err.message);
-        }
-      })
-    );
 
     loading.classList.add('hidden');
     content.classList.remove('hidden');
@@ -302,6 +284,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('cancel-form-btn').addEventListener('click', () =>
     document.getElementById('add-form').classList.add('hidden'));
   document.getElementById('save-nw-btn').addEventListener('click', saveNetWorth);
+
+  // Delete net worth row — event delegation so it survives table re-renders
+  document.getElementById('nw-tbody').addEventListener('click', async e => {
+    const btn = e.target.closest('.delete-nw-btn');
+    if (!btn || btn.disabled) return;
+    const tr = btn.closest('tr');
+    if (!tr) return;
+    const rowNum = parseInt(tr.dataset.sheetRow);
+    if (isNaN(rowNum)) return;
+    btn.disabled = true;
+    btn.textContent = '...';
+    try {
+      await SheetsAPI.deleteRow(CONFIG.SHEETS.NET_WORTH, rowNum);
+      await loadNetWorth();
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'מחק';
+      const errEl = document.createElement('div');
+      errEl.className = 'text-danger';
+      errEl.style.cssText = 'font-size:0.72rem;margin-top:4px;';
+      errEl.textContent = err.message;
+      btn.parentElement.appendChild(errEl);
+    }
+  });
 
   await loadNetWorth();
 });
