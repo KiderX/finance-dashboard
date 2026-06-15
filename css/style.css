@@ -535,6 +535,7 @@ tbody td { padding: 11px 14px; text-align: right; vertical-align: middle; }
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   padding: 10px 20px;
   border: none;
