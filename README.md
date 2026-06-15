@@ -41,7 +41,7 @@ Both APIs are required. Sheets API reads and writes transaction data. Drive API 
 4. Click **Save and Continue**
 5. On the **Scopes** page click **Add or Remove Scopes** and add:
    - `https://www.googleapis.com/auth/spreadsheets`
-   - `https://www.googleapis.com/auth/drive`
+   - `https://www.googleapis.com/auth/drive.file`
    - `https://www.googleapis.com/auth/userinfo.email`
 6. Save and continue
 7. Under **Test users** → Add Users → enter your own Gmail → Save
@@ -62,6 +62,14 @@ Both APIs are required. Sheets API reads and writes transaction data. Drive API 
 5. Click **Create** and copy the **Client ID** (ends in `.apps.googleusercontent.com`)
 
 > Do **not** copy the Client Secret — it is not used and must never go into the code.
+
+### 5. Create an API Key
+
+1. Still in **APIs & Services → Credentials**, click **Create Credentials → API Key**
+2. Copy the key (starts with `AIzaSy...`)
+3. Optionally click **Edit API Key** → restrict it to **Google Picker API** and your GitHub Pages domain for safety
+
+> The API Key is not sensitive — it is safe to store in the browser. It is used only to open the Google Drive file picker when selecting your spreadsheet during first-time setup.
 
 ---
 
@@ -134,12 +142,15 @@ No personal data is stored in the code. When you open the app for the first time
 2. Open `https://YOUR_USERNAME.github.io/finance-dashboard/`
 3. You will be redirected to `setup.html` automatically
 4. Enter:
-   - **Google Sheet ID** — from the spreadsheet URL
    - **OAuth Client ID** — from Google Cloud Console
+   - **API Key** — from Google Cloud Console (the `AIzaSy...` key)
    - **Your email address** — the Gmail you log in with
 5. Click **שמור והתחל**
+6. You will be redirected to the login page — click **התחבר עם Google** and sign in
+7. After login, a **Google Drive Picker** appears — select your spreadsheet from the list
+8. Done — you land on the dashboard
 
-You will be redirected to the login page. Click **התחבר עם Google** and sign in.
+The Picker is how the app gets `drive.file` permission on your specific spreadsheet, which is what allows it to manage sharing permissions when you add or remove users.
 
 > The setup page only appears on a browser that has never been configured. If you clear localStorage, you will see it again.
 

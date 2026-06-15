@@ -515,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           await SheetsAPI.removePermission(email);
           const updated = CONFIG.ALLOWED_EMAILS.filter(e => e !== email);
-          saveConfig({ spreadsheetId: CONFIG.SPREADSHEET_ID, clientId: CONFIG.CLIENT_ID, emails: updated });
+          saveConfig({ emails: updated });
           renderEmailList();
           showUsersMsg('✓ הגישה הוסרה', false);
         } catch (err) {
@@ -536,6 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const payload = btoa(JSON.stringify({
       spreadsheetId: CONFIG.SPREADSHEET_ID,
       clientId:      CONFIG.CLIENT_ID,
+      apiKey:        CONFIG.API_KEY,
       emails:        CONFIG.ALLOWED_EMAILS,
     }));
     const base = window.location.href.replace(/[^/]*$/, '');
@@ -555,7 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await SheetsAPI.addPermission(email, role);
       const updated = [...emails, { email, role }];
-      saveConfig({ spreadsheetId: CONFIG.SPREADSHEET_ID, clientId: CONFIG.CLIENT_ID, emails: updated });
+      saveConfig({ emails: updated });
       input.value = '';
       renderEmailList();
       const link = generateInviteLink();

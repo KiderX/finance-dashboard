@@ -11,43 +11,72 @@
 </head>
 <body>
   <div class="login-page">
-    <div class="login-card">
-      <div class="login-logo-wrap">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    <div class="login-card" id="login-card">
+
+      <!-- ── Login view ─────────────────────────────────────────────────── -->
+      <div id="view-login">
+        <div class="login-logo-wrap">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <h1 class="login-title">דשבורד פיננסי</h1>
+        <p class="login-subtitle">מעקב הוצאות, הכנסות ושווי נקי</p>
+        <div id="error-container"></div>
+        <button id="login-btn" class="google-btn" style="margin-top:24px;">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+          <span>התחבר עם Google</span>
+        </button>
+        <p class="text-muted mt-16" style="font-size:0.8rem;">
+          גישה מוגבלת לבעל החשבון המורשה בלבד
+        </p>
       </div>
-      <h1 class="login-title">דשבורד פיננסי</h1>
-      <p class="login-subtitle">מעקב הוצאות, הכנסות ושווי נקי</p>
 
-      <div id="error-container"></div>
+      <!-- ── Picker view (shown after login when no spreadsheet set yet) ── -->
+      <div id="view-picker" style="display:none;">
+        <div class="login-logo-wrap">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        </div>
+        <h1 class="login-title" style="font-size:1.4rem;">בחר את הגיליון שלך</h1>
+        <p class="login-subtitle">בחר את גיליון ה-Google Sheets שבו יישמרו הנתונים</p>
+        <div id="picker-error"></div>
+        <button id="pick-btn" class="btn btn-primary" style="width:100%;padding:14px;font-size:1rem;margin-top:24px;">
+          פתח את Google Drive ובחר גיליון
+        </button>
+        <p class="text-muted mt-16" style="font-size:0.78rem;line-height:1.6;">
+          פעולה זו מעניקה לאפליקציה גישה לגיליון הנבחר בלבד.<br/>
+          תצטרך לעשות זאת פעם אחת בלבד.
+        </p>
+      </div>
 
-      <button id="login-btn" class="google-btn" style="margin-top:24px;">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
-        <span>התחבר עם Google</span>
-      </button>
-
-      <p class="text-muted mt-16" style="font-size:0.8rem;">
-        גישה מוגבלת לבעל החשבון המורשה בלבד
-      </p>
     </div>
   </div>
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script>
     'use strict';
+
     document.addEventListener('DOMContentLoaded', () => {
       if (!isConfigured()) {
         window.location.href = 'setup.html';
         return;
       }
 
-      if (AuthManager.getToken()) {
+      // Already authenticated and spreadsheet is set — go straight to dashboard
+      if (AuthManager.getToken() && isSpreadsheetSet()) {
         window.location.href = 'dashboard.html';
         return;
       }
 
-      const loginBtn = document.getElementById('login-btn');
+      // Already authenticated but no spreadsheet yet — show Picker immediately
+      if (AuthManager.getToken() && !isSpreadsheetSet()) {
+        showPickerView();
+        return;
+      }
+
+      // ── Login flow ──────────────────────────────────────────────────────
+      const loginBtn       = document.getElementById('login-btn');
       const errorContainer = document.getElementById('error-container');
 
       loginBtn.addEventListener('click', async () => {
@@ -56,7 +85,11 @@
         errorContainer.innerHTML = '';
         try {
           await AuthManager.login();
-          window.location.href = 'dashboard.html';
+          if (isSpreadsheetSet()) {
+            window.location.href = 'dashboard.html';
+          } else {
+            showPickerView();
+          }
         } catch (err) {
           errorContainer.innerHTML = `<div class="error-msg mt-16">${err.message || 'שגיאה בהתחברות. נסה שוב.'}</div>`;
           loginBtn.disabled = false;
@@ -64,6 +97,55 @@
         }
       });
     });
+
+    // ── Picker view ─────────────────────────────────────────────────────────
+    function showPickerView() {
+      document.getElementById('view-login').style.display  = 'none';
+      document.getElementById('view-picker').style.display = 'block';
+      document.getElementById('pick-btn').addEventListener('click', openPicker);
+    }
+
+    function openPicker() {
+      const btn       = document.getElementById('pick-btn');
+      const errorEl   = document.getElementById('picker-error');
+      btn.disabled    = true;
+      btn.textContent = 'פותח...';
+      errorEl.innerHTML = '';
+
+      gapi.load('picker', () => {
+        const token = AuthManager.getToken();
+        if (!token) {
+          errorEl.innerHTML = '<div class="error-msg mt-16">פג תוקף ההתחברות. רענן את הדף.</div>';
+          btn.disabled    = false;
+          btn.textContent = 'פתח את Google Drive ובחר גיליון';
+          return;
+        }
+
+        const view = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS)
+          .setIncludeFolders(false);
+
+        const picker = new google.picker.PickerBuilder()
+          .addView(view)
+          .setOAuthToken(token)
+          .setDeveloperKey(CONFIG.API_KEY)
+          .setLocale('iw')
+          .setTitle('בחר גיליון')
+          .setCallback(pickerCallback)
+          .build();
+
+        picker.setVisible(true);
+        btn.disabled    = false;
+        btn.textContent = 'פתח את Google Drive ובחר גיליון';
+      });
+    }
+
+    function pickerCallback(data) {
+      if (data.action === google.picker.Action.PICKED) {
+        const file = data.docs[0];
+        saveConfig({ spreadsheetId: file.id });
+        window.location.href = 'dashboard.html';
+      }
+    }
   </script>
 </body>
 </html>

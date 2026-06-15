@@ -97,18 +97,6 @@
       <h1 class="setup-title">הגדרה ראשונית</h1>
       <p class="setup-subtitle">ההגדרות נשמרות בדפדפן שלך בלבד — לא בקוד המקור</p>
 
-      <!-- Spreadsheet ID -->
-      <div class="setup-section">
-        <div class="setup-label">מזהה Google Sheets</div>
-        <input type="text" id="input-sheet-id" class="input" dir="ltr"
-               placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
-               style="width:100%;box-sizing:border-box;" />
-        <p class="setup-help">
-          מצא בכתובת הגיליון:<br/>
-          <code>docs.google.com/spreadsheets/d/<strong>[המזהה]</strong>/edit</code>
-        </p>
-      </div>
-
       <!-- Client ID -->
       <div class="setup-section">
         <div class="setup-label">OAuth Client ID</div>
@@ -117,6 +105,18 @@
                style="width:100%;box-sizing:border-box;" />
         <p class="setup-help">
           Google Cloud Console ← Credentials ← OAuth 2.0 Client IDs ← Web application
+        </p>
+      </div>
+
+      <!-- API Key -->
+      <div class="setup-section">
+        <div class="setup-label">API Key</div>
+        <input type="text" id="input-api-key" class="input" dir="ltr"
+               placeholder="AIzaSy..."
+               style="width:100%;box-sizing:border-box;" />
+        <p class="setup-help">
+          Google Cloud Console ← Credentials ← Create Credentials ← API Key<br/>
+          הגיליון ייבחר אוטומטית לאחר ההתחברות דרך Google Drive Picker
         </p>
       </div>
 
@@ -150,7 +150,12 @@
     if (hash.startsWith('#invite=')) {
       try {
         const cfg = JSON.parse(atob(hash.slice(8)));
-        saveConfig({ spreadsheetId: cfg.spreadsheetId, clientId: cfg.clientId, emails: cfg.emails });
+        saveConfig({
+          spreadsheetId: cfg.spreadsheetId,
+          clientId:      cfg.clientId,
+          apiKey:        cfg.apiKey,
+          emails:        cfg.emails,
+        });
         window.location.href = 'index.html';
       } catch (_) {
         // Malformed invite — fall through to manual setup
@@ -189,22 +194,22 @@
       const errorEl      = document.getElementById('setup-error');
       errorEl.innerHTML  = '';
 
-      const spreadsheetId = document.getElementById('input-sheet-id').value.trim();
-      const clientId      = document.getElementById('input-client-id').value.trim();
-      const emails        = Array.from(document.querySelectorAll('.email-input'))
-                              .map(i => i.value.trim()).filter(Boolean);
+      const clientId = document.getElementById('input-client-id').value.trim();
+      const apiKey   = document.getElementById('input-api-key').value.trim();
+      const emails   = Array.from(document.querySelectorAll('.email-input'))
+                         .map(i => i.value.trim()).filter(Boolean);
 
-      if (!spreadsheetId) {
-        errorEl.innerHTML = '<div class="error-msg">יש להזין מזהה גיליון</div>'; return;
-      }
       if (!clientId) {
         errorEl.innerHTML = '<div class="error-msg">יש להזין OAuth Client ID</div>'; return;
+      }
+      if (!apiKey) {
+        errorEl.innerHTML = '<div class="error-msg">יש להזין API Key</div>'; return;
       }
       if (emails.length === 0) {
         errorEl.innerHTML = '<div class="error-msg">יש להזין לפחות כתובת מייל אחת</div>'; return;
       }
 
-      saveConfig({ spreadsheetId, clientId, emails });
+      saveConfig({ clientId, apiKey, emails });
       window.location.href = 'index.html';
     });
   </script>
