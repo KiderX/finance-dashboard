@@ -407,26 +407,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <!-- User management -->
       <div class="mb-0">
-        <div style="font-weight:600;margin-bottom:6px;">משתמשים מורשים</div>
-        <div id="settings-email-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
-        <div style="display:flex;gap:8px;">
+        <div style="font-weight:600;margin-bottom:10px;">הזמן משתמש</div>
+        <p class="text-muted" style="font-size:0.83rem;margin-bottom:12px;">
+          הוסף מייל ולחץ <strong>הזמן</strong> — המייל יתווסף לרשימה וקישור ההזמנה יועתק ללוח.
+          שלח את הקישור למשתמש החדש. הקלקה עליו מגדירה את הדפדפן שלו אוטומטית.
+        </p>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
           <input type="email" id="settings-new-email" class="input" placeholder="new@gmail.com"
                  style="flex:1;" dir="ltr" />
-          <button class="btn btn-outline" id="settings-add-email-btn" style="white-space:nowrap;">+ הוסף</button>
+          <button class="btn btn-primary" id="settings-add-email-btn" style="white-space:nowrap;">הזמן</button>
         </div>
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:8px;">משתמשים קיימים</div>
+        <div id="settings-email-list" style="display:flex;flex-direction:column;gap:6px;"></div>
         <div id="settings-users-msg" class="mt-8"></div>
-      </div>
-
-      <hr style="border-color:var(--border);margin:20px 0;" />
-
-      <!-- Invite link -->
-      <div class="mb-0">
-        <div style="font-weight:600;margin-bottom:6px;">לינק הזמנה</div>
-        <p class="text-muted" style="font-size:0.83rem;margin-bottom:12px;">
-          שלח את הלינק למשתמש חדש. הקלקה עליו מגדירה את הדפדפן שלו אוטומטית.
-        </p>
-        <button class="btn btn-outline w-full" id="settings-invite-btn">העתק לינק הזמנה</button>
-        <div id="settings-invite-msg" class="mt-8"></div>
       </div>
 
       <hr style="border-color:var(--border);margin:20px 0;" />
@@ -497,31 +490,34 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { el.innerHTML = ''; }, 3000);
   }
 
+  function generateInviteLink() {
+    const payload = btoa(JSON.stringify({
+      spreadsheetId: CONFIG.SPREADSHEET_ID,
+      clientId:      CONFIG.CLIENT_ID,
+      emails:        CONFIG.ALLOWED_EMAILS,
+    }));
+    const base = window.location.href.replace(/[^/]*$/, '');
+    return `${base}setup.html#invite=${payload}`;
+  }
+
   document.getElementById('settings-add-email-btn').addEventListener('click', () => {
     const input = document.getElementById('settings-new-email');
     const email = input.value.trim();
     if (!email || !email.includes('@')) { showUsersMsg('כתובת מייל לא תקינה', true); return; }
     const emails = CONFIG.ALLOWED_EMAILS;
     if (emails.includes(email)) { showUsersMsg('כתובת זו כבר קיימת', true); return; }
-    saveConfig({ spreadsheetId: CONFIG.SPREADSHEET_ID, clientId: CONFIG.CLIENT_ID, emails: [...emails, email] });
+
+    const updated = [...emails, email];
+    saveConfig({ spreadsheetId: CONFIG.SPREADSHEET_ID, clientId: CONFIG.CLIENT_ID, emails: updated });
     input.value = '';
     renderEmailList();
-    showUsersMsg(`✓ ${email} נוסף`, false);
-  });
 
-  // ── Invite link ────────────────────────────────────────────────────────────
-  document.getElementById('settings-invite-btn').addEventListener('click', () => {
-    const payload  = btoa(JSON.stringify({
-      spreadsheetId: CONFIG.SPREADSHEET_ID,
-      clientId:      CONFIG.CLIENT_ID,
-      emails:        CONFIG.ALLOWED_EMAILS,
-    }));
-    const base = window.location.href.replace(/[^/]*$/, '');
-    const link = `${base}setup.html#invite=${payload}`;
+    // Generate invite link with the updated list and copy to clipboard
+    const link = generateInviteLink();
     navigator.clipboard.writeText(link).then(() => {
-      const msg = document.getElementById('settings-invite-msg');
-      msg.innerHTML = '<div class="success-msg">✓ הלינק הועתק ללוח</div>';
-      setTimeout(() => { msg.innerHTML = ''; }, 3000);
+      showUsersMsg(`✓ ${email} נוסף — קישור הזמנה הועתק ללוח`, false);
+    }).catch(() => {
+      showUsersMsg(`✓ ${email} נוסף`, false);
     });
   });
 
