@@ -412,6 +412,14 @@ document.addEventListener('DOMContentLoaded', () => {
         <div id="settings-setup-msg" class="mt-8"></div>
       </div>
 
+      <hr style="border-color:var(--border);margin:20px 0;" />
+
+      <div class="mb-0">
+        <div style="font-weight:600;margin-bottom:6px;">הגדרות חיבור</div>
+        <p class="text-muted" style="font-size:0.83rem;margin-bottom:12px;">שנה מזהה גיליון, Client ID או כתובות מייל.</p>
+        <button class="btn btn-outline w-full" id="settings-reconfigure-btn">הגדרה מחדש</button>
+      </div>
+
       <div class="modal-actions mt-20">
         <button class="btn btn-outline" id="settings-close-btn">סגור</button>
       </div>
@@ -425,6 +433,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (triggerBtn) triggerBtn.addEventListener('click', open);
   document.getElementById('settings-close-btn').addEventListener('click', close);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+  document.getElementById('settings-reconfigure-btn').addEventListener('click', () => {
+    if (confirm('פעולה זו תנקה את ההגדרות הנוכחיות ותעביר אותך למסך ההגדרה. להמשיך?')) {
+      clearConfig();
+      window.location.href = 'setup.html';
+    }
+  });
 
   document.getElementById('settings-setup-btn').addEventListener('click', async () => {
     const btn = document.getElementById('settings-setup-btn');

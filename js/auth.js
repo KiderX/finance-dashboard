@@ -158,6 +158,12 @@ const AuthManager = (() => {
    * @returns {Promise<string|null>} Resolves with the user's email or null.
    */
   async function init({ redirectOnFail = true } = {}) {
+    // Redirect to setup if the user hasn't configured the app yet
+    if (!isConfigured()) {
+      window.location.href = 'setup.html';
+      return null;
+    }
+
     // If GSI is not available, wait for it
     if (typeof google === 'undefined') {
       await new Promise((resolve) => {
