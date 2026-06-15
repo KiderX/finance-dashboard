@@ -324,6 +324,10 @@ const SheetsAPI = (() => {
     await driveReq('DELETE', `/permissions/${perm.id}`, null);
   }
 
+  async function listPermissions() {
+    return driveReq('GET', '/permissions?fields=permissions(id,emailAddress,role,displayName)', null);
+  }
+
   // Public API
   return {
     getRange,
@@ -338,6 +342,7 @@ const SheetsAPI = (() => {
     migrateTransactionsIfNeeded,
     addPermission,
     removePermission,
+    listPermissions,
   };
 })();
 
@@ -480,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let permissions = [];
     try {
-      const data = await driveReq('GET', '/permissions?fields=permissions(id,emailAddress,role,displayName)', null);
+      const data = await SheetsAPI.listPermissions();
       permissions = data?.permissions || [];
     } catch (_) {
       container.innerHTML = '<p class="text-muted" style="font-size:0.83rem;">לא ניתן לטעון רשימת משתמשים</p>';

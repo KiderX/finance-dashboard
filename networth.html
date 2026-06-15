@@ -198,7 +198,7 @@ async function loadNetWorth() {
         manualMap[r[0]] = {
           portfolio: p, cashFund: c, savings: s,
           total: parseFloat(r[4] || 0) || p + c + s,
-          sheetRow: i + 2, // 1-indexed, +1 for header
+          sheetRow: i + 1, // 0-based for deleteDimension API (header=0, first data row=1)
         };
       });
     }
@@ -234,15 +234,18 @@ async function loadNetWorth() {
         cumPortfolio += add.investments;
         cumCashFund  += add.cashFund;
         cumSavings   += add.savings;
-        historyRows.push({
-          month,
-          portfolio: add.investments,
-          cashFund:  add.cashFund,
-          savings:   add.savings,
-          total:     add.investments + add.cashFund + add.savings,
-          source:    'auto',
-          sheetRow:  null,
-        });
+        // Only add a history row if the allocation contributed something non-zero
+        if (add.investments || add.cashFund || add.savings) {
+          historyRows.push({
+            month,
+            portfolio: add.investments,
+            cashFund:  add.cashFund,
+            savings:   add.savings,
+            total:     add.investments + add.cashFund + add.savings,
+            source:    'auto',
+            sheetRow:  null,
+          });
+        }
       }
       if (manual) {
         cumPortfolio += manual.portfolio;

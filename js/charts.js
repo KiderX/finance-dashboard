@@ -496,17 +496,27 @@ function renderNetWorthStackedArea(canvasId, months, portfolio, cashFund, saving
   const canvas = prepareCanvas(canvasId);
   const opts   = defaultOptions();
   opts.scales  = defaultScales((v) => formatShekel(v));
-  opts.scales.y.stacked = true;
-  opts.plugins.legend.display = false;
+  opts.plugins.legend.display = true;
   opts.plugins.tooltip.callbacks = {
     label: (c) => `${c.dataset.label}: ${formatShekel(c.parsed.y)}`,
   };
 
-  const lineDataset = (label, data, color, alphaFill) => ({
+  // Each dataset shows its own CUMULATIVE total (not stacked on top of each other).
+  // Datasets are ordered largest→smallest so smaller areas remain visible in front.
+  const lineDataset = (label, data, color, alphaTop, alphaBot) => ({
     label,
     data,
     borderColor: color,
-    backgroundColor: color.replace(')', `, ${alphaFill})`).replace('rgb', 'rgba'),
+    backgroundColor: (ctx) => {
+      const { chartArea } = ctx.chart;
+      if (!chartArea) return color.replace(')', `, ${alphaTop})`).replace('rgb', 'rgba');
+      const c   = ctx.chart.ctx;
+      const hex = color.replace('rgb(', '').replace(')', '').split(',').map(Number);
+      const g   = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+      g.addColorStop(0, `rgba(${hex},${alphaTop})`);
+      g.addColorStop(1, `rgba(${hex},${alphaBot})`);
+      return g;
+    },
     borderWidth: 2,
     pointRadius: 0,
     pointHoverRadius: 5,
@@ -519,9 +529,9 @@ function renderNetWorthStackedArea(canvasId, months, portfolio, cashFund, saving
     data: {
       labels: months,
       datasets: [
-        lineDataset('תיק השקעות', portfolio, 'rgb(14, 165, 233)',  0.55),
-        lineDataset('קרן כספית',  cashFund,  'rgb(16, 185, 129)', 0.50),
-        lineDataset('חסכונות',    savings,   'rgb(139, 92, 246)', 0.45),
+        lineDataset('תיק השקעות', portfolio, 'rgb(14, 165, 233)',  0.50, 0.08),
+        lineDataset('קרן כספית',  cashFund,  'rgb(16, 185, 129)', 0.55, 0.12),
+        lineDataset('חסכונות',    savings,   'rgb(139, 92, 246)', 0.60, 0.15),
       ],
     },
     options: opts,
