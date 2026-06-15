@@ -41,7 +41,7 @@ Both APIs are required. Sheets API reads and writes transaction data. Drive API 
 4. Click **Save and Continue**
 5. On the **Scopes** page click **Add or Remove Scopes** and add:
    - `https://www.googleapis.com/auth/spreadsheets`
-   - `https://www.googleapis.com/auth/drive.file`
+   - `https://www.googleapis.com/auth/drive`
    - `https://www.googleapis.com/auth/userinfo.email`
 6. Save and continue
 7. Under **Test users** → Add Users → enter your own Gmail → Save
@@ -62,14 +62,6 @@ Both APIs are required. Sheets API reads and writes transaction data. Drive API 
 5. Click **Create** and copy the **Client ID** (ends in `.apps.googleusercontent.com`)
 
 > Do **not** copy the Client Secret — it is not used and must never go into the code.
-
-### 5. Create an API Key
-
-1. Still in **APIs & Services → Credentials**, click **Create Credentials → API Key**
-2. Copy the key (starts with `AIzaSy...`)
-3. Optionally click **Edit API Key** → restrict it to **Google Picker API** and your GitHub Pages domain for safety
-
-> The API Key is not sensitive — it is safe to store in the browser. It is used only to open the Google Drive file picker when selecting your spreadsheet during first-time setup.
 
 ---
 
@@ -142,15 +134,13 @@ No personal data is stored in the code. When you open the app for the first time
 2. Open `https://YOUR_USERNAME.github.io/finance-dashboard/`
 3. You will be redirected to `setup.html` automatically
 4. Enter:
+   - **Google Sheet URL or ID** — paste the full URL from your spreadsheet (e.g. `https://docs.google.com/spreadsheets/d/ABC123/edit`) or just the ID part
    - **OAuth Client ID** — from Google Cloud Console
-   - **API Key** — from Google Cloud Console (the `AIzaSy...` key)
    - **Your email address** — the Gmail you log in with
 5. Click **שמור והתחל**
 6. You will be redirected to the login page — click **התחבר עם Google** and sign in
-7. After login, a **Google Drive Picker** appears — select your spreadsheet from the list
-8. Done — you land on the dashboard
-
-The Picker is how the app gets `drive.file` permission on your specific spreadsheet, which is what allows it to manage sharing permissions when you add or remove users.
+7. Google will show an "unverified app" warning — click **Advanced → Go to Finance Dashboard** to continue
+8. Grant both permissions (Sheets + Drive) → done, you land on the dashboard
 
 > The setup page only appears on a browser that has never been configured. If you clear localStorage, you will see it again.
 
@@ -185,7 +175,7 @@ When they open the link:
 
 They still need to click **התחבר עם Google** and sign in with the Gmail you entered.
 
-> **Prerequisite:** The person's Gmail must also be added as a Test User in Google Cloud Console (Part 1, Step 3) while your app is in Testing mode.
+> The new user will see the "unverified app" warning on their first login — they click **Advanced → Go to Finance Dashboard** to continue. This happens once only.
 
 ### Removing a user
 
@@ -312,7 +302,7 @@ All write controls are hidden in this mode.
 
 | Problem | Fix |
 |---|---|
-| Redirected to setup.html immediately | Normal on first visit — fill in your Sheet ID, Client ID, and email |
+| Redirected to setup.html immediately | Normal on first visit — fill in your Sheet URL, Client ID, and email |
 | "הגישה נדחתה" on login | Your Gmail is not in the app's allowed email list. Open Settings → משתמשים on a device that is already configured and add yourself |
 | "לא ניתן לאמת את פרטי המשתמש" | The `email` scope is missing. Go to Google Cloud → OAuth consent screen → Scopes and add `userinfo.email` |
 | "שגיאת API: 403" on Drive operations | Google Drive API is not enabled, or the logged-in account doesn't have editor access to the sheet |
@@ -320,7 +310,7 @@ All write controls are hidden in this mode.
 | "שגיאת API: 401" | Token expired — sign out and sign in again |
 | OAuth popup doesn't appear | Your domain is not in Authorized JavaScript Origins in Google Cloud Console |
 | Invite link shows setup page instead of login | The invite URL was truncated. Make sure you copied the full link including the `#invite=...` part |
-| New user gets "הגישה נדחתה" after using invite link | They need to be added as a Test User in Google Cloud Console → OAuth consent screen → Test users |
+| New user gets "הגישה נדחתה" after using invite link | Their email wasn't added in the app's Settings → משתמשים before the link was generated. Add them and send a new link. |
 | Dates show as numbers in the CSV | Run `normalizer.py` — it converts Excel date serials to DD/MM/YYYY automatically |
 | Categories wrong after upload | Edit them in the preview table before clicking העלה |
 | Drive permission error when adding a user | Make sure you're logged in as the sheet owner, and that the Drive API is enabled in Google Cloud |
