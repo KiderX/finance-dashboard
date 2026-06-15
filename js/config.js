@@ -6,16 +6,39 @@
 
 'use strict';
 
-/** @type {Object} Global application configuration */
+// ── localStorage keys ───────────────────────────────────────────────────────
+const CFG_KEYS = {
+  SPREADSHEET_ID: 'finance_spreadsheet_id',
+  CLIENT_ID:      'finance_client_id',
+  EMAILS:         'finance_allowed_emails',
+};
+
+/** Returns true when all required config values are present in localStorage */
+function isConfigured() {
+  return !!(
+    localStorage.getItem(CFG_KEYS.SPREADSHEET_ID) &&
+    localStorage.getItem(CFG_KEYS.CLIENT_ID) &&
+    JSON.parse(localStorage.getItem(CFG_KEYS.EMAILS) || '[]').length > 0
+  );
+}
+
+/** Persists config to localStorage */
+function saveConfig({ spreadsheetId, clientId, emails }) {
+  localStorage.setItem(CFG_KEYS.SPREADSHEET_ID, spreadsheetId.trim());
+  localStorage.setItem(CFG_KEYS.CLIENT_ID,      clientId.trim());
+  localStorage.setItem(CFG_KEYS.EMAILS,         JSON.stringify(emails.map(e => e.trim()).filter(Boolean)));
+}
+
+/** Wipes config from localStorage */
+function clearConfig() {
+  Object.values(CFG_KEYS).forEach(k => localStorage.removeItem(k));
+}
+
+/** @type {Object} Global application configuration — values stored in localStorage */
 const CONFIG = {
-  /** Google Spreadsheet ID (the long string in the sheet URL) */
-  SPREADSHEET_ID: '1FNS_3q1Pr4YogTl0z-0Jke3l7fNBDHd3MZLGWOxWC6s',
-
-  /** Google OAuth 2.0 Client ID (safe to expose in frontend) */
-  CLIENT_ID: '620598056888-3skoat2urtmpk57t37vb4i0tmrg3m6a9.apps.googleusercontent.com',
-
-  /** Emails allowed to log in with full access */
-  ALLOWED_EMAILS: ['matandayan81@gmail.com', 'shakeddahari8@gmail.com'],
+  get SPREADSHEET_ID() { return localStorage.getItem(CFG_KEYS.SPREADSHEET_ID) || ''; },
+  get CLIENT_ID()      { return localStorage.getItem(CFG_KEYS.CLIENT_ID)      || ''; },
+  get ALLOWED_EMAILS() { return JSON.parse(localStorage.getItem(CFG_KEYS.EMAILS) || '[]'); },
 
   /** OAuth scope for full read+write access */
   SCOPES: 'https://www.googleapis.com/auth/spreadsheets',

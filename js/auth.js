@@ -158,6 +158,11 @@ const AuthManager = (() => {
    * @returns {Promise<string|null>} Resolves with the user's email or null.
    */
   async function init({ redirectOnFail = true } = {}) {
+    if (!isConfigured()) {
+      window.location.href = 'setup.html';
+      return null;
+    }
+
     // If GSI is not available, wait for it
     if (typeof google === 'undefined') {
       await new Promise((resolve) => {

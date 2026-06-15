@@ -390,26 +390,62 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Inject settings modal (works on every page that loads sheets.js)
+  // ── Settings modal ──────────────────────────────────────────────────────────
   const overlay = document.createElement('div');
   overlay.id        = 'settings-modal';
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal" style="max-width:440px;">
+    <div class="modal" style="max-width:460px;max-height:90vh;overflow-y:auto;">
       <div class="modal-title">הגדרות</div>
 
       <div class="form-group mt-4 mb-0">
         <label style="font-size:0.78rem;color:var(--text-muted);">מזהה גיליון</label>
-        <div style="font-size:0.8rem;word-break:break-all;color:var(--text-muted);margin-top:4px;">${CONFIG.SPREADSHEET_ID}</div>
+        <div style="font-size:0.75rem;word-break:break-all;color:var(--text-muted);margin-top:4px;direction:ltr;unicode-bidi:isolate;">${CONFIG.SPREADSHEET_ID}</div>
       </div>
 
       <hr style="border-color:var(--border);margin:20px 0;" />
 
+      <!-- User management -->
+      <div class="mb-0">
+        <div style="font-weight:600;margin-bottom:6px;">משתמשים מורשים</div>
+        <div id="settings-email-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="email" id="settings-new-email" class="input" placeholder="new@gmail.com"
+                 style="flex:1;" dir="ltr" />
+          <button class="btn btn-outline" id="settings-add-email-btn" style="white-space:nowrap;">+ הוסף</button>
+        </div>
+        <div id="settings-users-msg" class="mt-8"></div>
+      </div>
+
+      <hr style="border-color:var(--border);margin:20px 0;" />
+
+      <!-- Invite link -->
+      <div class="mb-0">
+        <div style="font-weight:600;margin-bottom:6px;">לינק הזמנה</div>
+        <p class="text-muted" style="font-size:0.83rem;margin-bottom:12px;">
+          שלח את הלינק למשתמש חדש. הקלקה עליו מגדירה את הדפדפן שלו אוטומטית.
+        </p>
+        <button class="btn btn-outline w-full" id="settings-invite-btn">העתק לינק הזמנה</button>
+        <div id="settings-invite-msg" class="mt-8"></div>
+      </div>
+
+      <hr style="border-color:var(--border);margin:20px 0;" />
+
+      <!-- Sheet init -->
       <div class="mb-0">
         <div style="font-weight:600;margin-bottom:6px;">הגדרה ראשונית של הגיליון</div>
         <p class="text-muted" style="font-size:0.83rem;margin-bottom:12px;">יוצר לשוניות חסרות וכותרות. <strong>לא מוחק נתונים קיימים.</strong></p>
         <button class="btn btn-outline w-full" id="settings-setup-btn">הגדר גיליון</button>
         <div id="settings-setup-msg" class="mt-8"></div>
+      </div>
+
+      <hr style="border-color:var(--border);margin:20px 0;" />
+
+      <!-- Reconfigure -->
+      <div class="mb-0">
+        <div style="font-weight:600;margin-bottom:6px;">הגדרה מחדש</div>
+        <p class="text-muted" style="font-size:0.83rem;margin-bottom:12px;">נקה את כל ההגדרות ועבור למסך ההגדרה הראשונית.</p>
+        <button class="btn btn-outline w-full" id="settings-reconfigure-btn" style="border-color:var(--expense);color:var(--expense);">הגדרה מחדש</button>
       </div>
 
       <div class="modal-actions mt-20">
@@ -418,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>`;
   document.body.appendChild(overlay);
 
-  const open  = () => overlay.classList.add('open');
+  const open  = () => { renderEmailList(); overlay.classList.add('open'); };
   const close = () => overlay.classList.remove('open');
 
   const triggerBtn = document.getElementById('settings-btn');
@@ -426,6 +462,70 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('settings-close-btn').addEventListener('click', close);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 
+  // ── Render email list ──────────────────────────────────────────────────────
+  function renderEmailList() {
+    const container = document.getElementById('settings-email-list');
+    const emails    = CONFIG.ALLOWED_EMAILS;
+    container.innerHTML = '';
+    if (emails.length === 0) {
+      container.innerHTML = '<p class="text-muted" style="font-size:0.83rem;">אין משתמשים מורשים</p>';
+      return;
+    }
+    emails.forEach(email => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+      row.innerHTML = `
+        <span style="flex:1;font-size:0.85rem;direction:ltr;unicode-bidi:isolate;">${email}</span>
+        <button class="btn btn-sm btn-outline remove-email-btn"
+                style="border-color:var(--expense);color:var(--expense);padding:2px 8px;"
+                data-email="${email}">✕</button>`;
+      container.appendChild(row);
+    });
+    container.querySelectorAll('.remove-email-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const updated = CONFIG.ALLOWED_EMAILS.filter(e => e !== btn.dataset.email);
+        saveConfig({ spreadsheetId: CONFIG.SPREADSHEET_ID, clientId: CONFIG.CLIENT_ID, emails: updated });
+        renderEmailList();
+        showUsersMsg('✓ הוסר', false);
+      });
+    });
+  }
+
+  function showUsersMsg(text, isError) {
+    const el = document.getElementById('settings-users-msg');
+    el.innerHTML = `<div class="${isError ? 'error-msg' : 'success-msg'}">${text}</div>`;
+    setTimeout(() => { el.innerHTML = ''; }, 3000);
+  }
+
+  document.getElementById('settings-add-email-btn').addEventListener('click', () => {
+    const input = document.getElementById('settings-new-email');
+    const email = input.value.trim();
+    if (!email || !email.includes('@')) { showUsersMsg('כתובת מייל לא תקינה', true); return; }
+    const emails = CONFIG.ALLOWED_EMAILS;
+    if (emails.includes(email)) { showUsersMsg('כתובת זו כבר קיימת', true); return; }
+    saveConfig({ spreadsheetId: CONFIG.SPREADSHEET_ID, clientId: CONFIG.CLIENT_ID, emails: [...emails, email] });
+    input.value = '';
+    renderEmailList();
+    showUsersMsg(`✓ ${email} נוסף`, false);
+  });
+
+  // ── Invite link ────────────────────────────────────────────────────────────
+  document.getElementById('settings-invite-btn').addEventListener('click', () => {
+    const payload  = btoa(JSON.stringify({
+      spreadsheetId: CONFIG.SPREADSHEET_ID,
+      clientId:      CONFIG.CLIENT_ID,
+      emails:        CONFIG.ALLOWED_EMAILS,
+    }));
+    const base = window.location.href.replace(/[^/]*$/, '');
+    const link = `${base}setup.html#invite=${payload}`;
+    navigator.clipboard.writeText(link).then(() => {
+      const msg = document.getElementById('settings-invite-msg');
+      msg.innerHTML = '<div class="success-msg">✓ הלינק הועתק ללוח</div>';
+      setTimeout(() => { msg.innerHTML = ''; }, 3000);
+    });
+  });
+
+  // ── Sheet init ─────────────────────────────────────────────────────────────
   document.getElementById('settings-setup-btn').addEventListener('click', async () => {
     const btn = document.getElementById('settings-setup-btn');
     const msg = document.getElementById('settings-setup-msg');
@@ -440,6 +540,14 @@ document.addEventListener('DOMContentLoaded', () => {
       msg.innerHTML = `<div class="error-msg">${err.message}</div>`;
       btn.textContent = 'הגדר גיליון';
       btn.disabled = false;
+    }
+  });
+
+  // ── Reconfigure ────────────────────────────────────────────────────────────
+  document.getElementById('settings-reconfigure-btn').addEventListener('click', () => {
+    if (confirm('פעולה זו תנקה את כל ההגדרות ותעביר אותך למסך ההגדרה הראשונית. להמשיך?')) {
+      clearConfig();
+      window.location.href = 'setup.html';
     }
   });
 });
