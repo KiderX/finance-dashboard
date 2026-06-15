@@ -226,6 +226,12 @@ async function loadNetWorth() {
       }
       const manual = manualMap[month];
       if (manual) {
+        // Manual override = authoritative snapshot for this month.
+        // ALSO reset the cumulative baseline so subsequent months accumulate
+        // on top of this known real-world value (not from allocation-only zero).
+        cumPortfolio = manual.portfolio;
+        cumCashFund  = manual.cashFund;
+        cumSavings   = manual.savings;
         return { month, portfolio: manual.portfolio, cashFund: manual.cashFund,
                  savings: manual.savings, total: manual.total,
                  source: 'manual', sheetRow: manual.sheetRow };

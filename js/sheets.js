@@ -473,18 +473,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const desc        = document.getElementById('settings-users-desc');
     const inviteCtrl  = document.getElementById('settings-invite-controls');
     const currentUser = AuthManager.getUserEmail();
-    const myRole      = AuthManager.getUserRole(); // 'owner' | 'writer' | 'reader'
-    const isOwner     = myRole === 'owner';
 
     container.innerHTML = '<p class="text-muted" style="font-size:0.83rem;">טוען...</p>';
-
-    // Only owners can add/remove users
-    if (inviteCtrl) inviteCtrl.style.display = isOwner ? '' : 'none';
-    if (desc) {
-      desc.textContent = isOwner
-        ? 'הוסף מייל ולחץ הזמן — הגישה תינתן בגיליון וקישור הגדרה יועתק ללוח.'
-        : 'רק הבעלים יכול לנהל משתמשים.';
-    }
+    if (inviteCtrl) inviteCtrl.style.display = 'none'; // hidden until we know if owner
+    if (desc) desc.textContent = 'טוען רשימת משתמשים...';
 
     let permissions = [];
     try {
@@ -493,6 +485,17 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (_) {
       container.innerHTML = '<p class="text-muted" style="font-size:0.83rem;">לא ניתן לטעון רשימת משתמשים</p>';
       return;
+    }
+
+    // Determine owner status from the live permissions list (reliable even if session role was wrong)
+    const myPerm  = permissions.find(p => (p.emailAddress || '').toLowerCase() === (currentUser || '').toLowerCase());
+    const isOwner = myPerm?.role === 'owner';
+
+    if (inviteCtrl) inviteCtrl.style.display = isOwner ? '' : 'none';
+    if (desc) {
+      desc.textContent = isOwner
+        ? 'הוסף מייל ולחץ הזמן — הגישה תינתן בגיליון וקישור הגדרה יועתק ללוח.'
+        : 'רק הבעלים יכול לנהל משתמשים.';
     }
 
     container.innerHTML = '';
@@ -504,10 +507,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const ROLE_LABEL = { owner: 'בעלים', writer: 'עריכה', reader: 'צפייה', commenter: 'תגובות' };
 
     permissions.forEach(p => {
-      const email     = p.emailAddress || '';
-      const role      = p.role || 'reader';
-      const roleLabel = ROLE_LABEL[role] || role;
-      const isMe      = email.toLowerCase() === (currentUser || '').toLowerCase();
+      const email       = p.emailAddress || '';
+      const role        = p.role || 'reader';
+      const roleLabel   = ROLE_LABEL[role] || role;
+      const isMe        = email.toLowerCase() === (currentUser || '').toLowerCase();
       const isFileOwner = role === 'owner';
 
       const row = document.createElement('div');
