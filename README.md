@@ -44,9 +44,12 @@ Both APIs are required. Sheets API reads and writes transaction data. Drive API 
    - `https://www.googleapis.com/auth/drive`
    - `https://www.googleapis.com/auth/userinfo.email`
 6. Save and continue
-7. Under **Test users** → Add Users → enter every Gmail that will use the app → Save
+7. Under **Test users** → Add Users → enter your own Gmail → Save
+8. Back on the OAuth consent screen summary, click **Publish App** → confirm
 
-> **Important:** Every person who will log in must be added as a Test User here while the app is in "Testing" mode. The in-app user management (Part 5) handles the app-level allow list, but Google's consent screen also has its own restriction.
+> **Why publish?** By default Google keeps your app in "Testing" mode, which requires you to manually add every user to the Test Users list above. Publishing removes that restriction — from then on you manage users entirely from the app's Settings panel (Part 4). Publishing does not mean Google reviews or approves your app; it just lifts the testing restriction instantly.
+>
+> **Side effect:** New users will see a one-time Google warning saying the app is "unverified." They click **Advanced → Go to Finance Dashboard (unsafe)** to continue. This is expected for personal apps that haven't gone through Google's formal verification process — it does not mean anything is wrong.
 
 ### 4. Create OAuth 2.0 credentials
 
