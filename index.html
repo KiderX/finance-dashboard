@@ -138,7 +138,6 @@
         _picker = new google.picker.PickerBuilder()
           .addView(google.picker.ViewId.SPREADSHEETS)
           .setOAuthToken(token)
-          .setDeveloperKey(CONFIG.API_KEY)
           .setCallback(window._pickerCallback)
           .build();
 
