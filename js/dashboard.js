@@ -402,7 +402,7 @@ function renderTransactions(transactions) {
       if (!confirm(`למחוק את העסקה "${merchant}"?`)) return;
       btn.disabled = true; btn.textContent = '...';
       try {
-        await SheetsAPI.deleteRow(CONFIG.SHEETS.TRANSACTIONS, rowIdx);
+        await SheetsAPI.deleteRow(getTxSheet(parseInt(currentMonth.split('/')[1])), rowIdx);
         await loadMonth(currentMonth);
       } catch (err) {
         alert('שגיאה: ' + err.message);
@@ -610,7 +610,9 @@ async function saveManualEntry(closeAfter) {
   btnSave.disabled = true; btnMore.disabled = true;
   btnSave.textContent = 'שומר...';
   try {
-    await SheetsAPI.appendRows(CONFIG.SHEETS.TRANSACTIONS, [[
+    const txYear = parseInt((month || currentMonth).split('/')[1]) || new Date().getFullYear();
+    await SheetsAPI.ensureYearTab(txYear);
+    await SheetsAPI.appendRows(getTxSheet(txYear), [[
       date, merchant, amount, category, 'ידני', notes, month, 'הזנה ידנית', 'FALSE', hash,
     ]]);
     await SheetsAPI.appendRows(CONFIG.SHEETS.AUDIT_LOG, [[
@@ -656,9 +658,11 @@ async function loadMonth(monthStr) {
   window._dashExpenses = 0;
 
   try {
+    const year = parseInt(monthStr.split('/')[1]);
+    await SheetsAPI.ensureYearTab(year);
     const batch = await SheetsAPI.batchGet([
       CONFIG.SHEETS.INCOME,
-      CONFIG.SHEETS.TRANSACTIONS,
+      getTxSheet(year),
       CONFIG.SHEETS.PROFIT_ALLOCATION,
     ]);
     const [incomeData, txData, allocData] = batch.valueRanges.map(vr => vr.values || []);
@@ -695,6 +699,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!email) return;
   document.getElementById('user-email').textContent = email;
 
+  await SheetsAPI.migrateTransactionsIfNeeded().catch(() => {});
   loadCustomCategories();
 
   // Month navigation

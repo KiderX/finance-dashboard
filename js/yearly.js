@@ -199,7 +199,7 @@ async function loadYearly() {
     const [summaryData, allocData, txData, incomeData, esppData] = await Promise.all([
       SheetsAPI.getSheet(CONFIG.SHEETS.MONTHLY_SUMMARY),
       SheetsAPI.getSheet(CONFIG.SHEETS.PROFIT_ALLOCATION),
-      SheetsAPI.getSheet(CONFIG.SHEETS.TRANSACTIONS),
+      SheetsAPI.getSheet(getTxSheet(currentYear)),
       SheetsAPI.getSheet(CONFIG.SHEETS.INCOME),
       SheetsAPI.getSheet(CONFIG.SHEETS.ESPP),
     ]);

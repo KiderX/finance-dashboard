@@ -533,7 +533,10 @@ async function runDuplicateCheck() {
   btn.disabled = true; btn.textContent = 'בודק...';
 
   try {
-    const existing = await SheetsAPI.getRange(CONFIG.SHEETS.TRANSACTIONS, 'A:J');
+    const firstMonth = UploadState.rows[0]?.['חודש'] || '';
+    const txYear     = parseInt(firstMonth.split('/')[1]) || new Date().getFullYear();
+    await SheetsAPI.ensureYearTab(txYear);
+    const existing = await SheetsAPI.getRange(getTxSheet(txYear), 'A:J');
     UploadState.existingHashes = new Set(
       existing.slice(1).map(r => r[9]).filter(Boolean)
     );
@@ -608,7 +611,9 @@ async function doUpload() {
 
     if (toUpload.length === 0) throw new Error('אין עסקאות חדשות להעלאה (כל העסקאות כבר קיימות)');
 
-    await SheetsAPI.appendRows(CONFIG.SHEETS.TRANSACTIONS, toUpload);
+    const uploadYear = parseInt(month.split('/')[1]);
+    await SheetsAPI.ensureYearTab(uploadYear);
+    await SheetsAPI.appendRows(getTxSheet(uploadYear), toUpload);
 
     // Audit log
     const totalAmt = toUpload.reduce((s, r) => s + parseFloat(r[2] || 0), 0);

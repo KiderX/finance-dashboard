@@ -185,6 +185,56 @@ const SheetsAPI = (() => {
     return -1;
   }
 
+  const TX_HEADERS = ['תאריך','שם בית עסק','סכום חיוב','קטגוריה','סוג עסקה','הערות','חודש','מקור כרטיס','פוצל','מזהה ייחודי'];
+
+  /**
+   * Ensures a year-partitioned transaction tab exists, creating it with headers if not.
+   * @param {number} year - e.g. 2026
+   */
+  async function ensureYearTab(year) {
+    const ids  = await fetchSheetIds();
+    const name = getTxSheet(year);
+    if (ids[name] !== undefined) return;
+    await fetch(`${baseUrl()}:batchUpdate`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: name } } }] }),
+    }).then(r => handleResponse(r));
+    _sheetIdCache = null;
+    await updateRange(name, 'A1', [TX_HEADERS]);
+  }
+
+  /**
+   * One-time migration: if the old "Transactions" tab has data and no year tab exists yet,
+   * copies rows into the correct transactions_YYYY tabs and leaves the old tab untouched.
+   */
+  async function migrateTransactionsIfNeeded() {
+    const ids = await fetchSheetIds();
+    if (!ids['Transactions']) return;
+    const hasYearTab = Object.keys(ids).some(k => /^transactions_\d{4}$/.test(k));
+    if (hasYearTab) return;
+
+    const data = await getSheet('Transactions');
+    if (data.length < 2) return;
+
+    const headers  = data[0];
+    const monthIdx = headers.indexOf('חודש');
+    if (monthIdx === -1) return;
+
+    const byYear = {};
+    data.slice(1).forEach(row => {
+      const parts = (row[monthIdx] || '').split('/');
+      const year  = parts[1];
+      if (!year || !/^\d{4}$/.test(year)) return;
+      (byYear[year] = byYear[year] || []).push(row);
+    });
+
+    for (const [year, rows] of Object.entries(byYear)) {
+      await ensureYearTab(Number(year));
+      await appendRows(getTxSheet(Number(year)), rows);
+    }
+  }
+
   /**
    * Creates all required sheet tabs and writes headers.
    * Safe to call on an already-initialized spreadsheet — skips existing tabs.
@@ -192,7 +242,6 @@ const SheetsAPI = (() => {
    */
   async function initializeSpreadsheet() {
     const SHEET_DEFS = [
-      { name: CONFIG.SHEETS.TRANSACTIONS,      headers: ['תאריך','שם בית עסק','סכום חיוב','קטגוריה','סוג עסקה','הערות','חודש','מקור כרטיס','פוצל','מזהה ייחודי'] },
       { name: CONFIG.SHEETS.INCOME,            headers: ['חודש','משכורת ראשונה','משכורת שנייה','בונוסים','ESPP','הכנסות נוספות','סה"כ הכנסות','הערות'] },
       { name: CONFIG.SHEETS.MONTHLY_SUMMARY,   headers: ['חודש','סה"כ הוצאות','סה"כ הכנסות','רווח','אחוז חיסכון'] },
       { name: CONFIG.SHEETS.PROFIT_ALLOCATION, headers: ['חודש','רווח','עו"ש','קרן כספית','השקעות','אחר','סה"כ מוקצה','הערות'] },
@@ -231,6 +280,9 @@ const SheetsAPI = (() => {
       });
       await handleResponse(res);
     }
+
+    // Ensure the current year's transaction tab exists
+    await ensureYearTab(new Date().getFullYear());
 
     return missing.length;
   }
@@ -277,6 +329,8 @@ const SheetsAPI = (() => {
     findMonthRow,
     deleteRow,
     initializeSpreadsheet,
+    ensureYearTab,
+    migrateTransactionsIfNeeded,
   };
 })();
 

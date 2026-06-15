@@ -31,7 +31,6 @@ const CONFIG = {
 
   /** Sheet tab names (must match exactly what is in the Google Sheet) */
   SHEETS: {
-    TRANSACTIONS: 'Transactions',
     INCOME: 'Income',
     MONTHLY_SUMMARY: 'MonthlySummary',
     PROFIT_ALLOCATION: 'Allocation',
@@ -145,6 +144,11 @@ const CONFIG = {
     'ריהוט ובית':     'שונות',
   },
 };
+
+/** Returns the year-partitioned transaction sheet name, e.g. "transactions_2026" */
+function getTxSheet(year) {
+  return `transactions_${year}`;
+}
 
 CONFIG.CATEGORIES = CONFIG.CATEGORY_GROUPS.flatMap(g => [
   ...g.subs,
