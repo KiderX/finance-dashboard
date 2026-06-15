@@ -475,18 +475,22 @@ document.addEventListener('DOMContentLoaded', () => {
       container.innerHTML = '<p class="text-muted" style="font-size:0.83rem;">אין משתמשים מורשים</p>';
       return;
     }
+    const currentUser = AuthManager.getUserEmail();
     entries.forEach(entry => {
-      const email    = typeof entry === 'string' ? entry : entry.email;
-      const role     = typeof entry === 'string' ? 'writer' : entry.role;
+      const email     = typeof entry === 'string' ? entry : entry.email;
+      const role      = typeof entry === 'string' ? 'writer' : entry.role;
       const roleLabel = role === 'reader' ? 'צפייה' : 'עריכה';
+      const isMe      = email === currentUser;
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:8px;';
       row.innerHTML = `
         <span style="flex:1;font-size:0.85rem;direction:ltr;unicode-bidi:isolate;">${email}</span>
         <span style="font-size:0.75rem;color:var(--text-muted);white-space:nowrap;">${roleLabel}</span>
-        <button class="btn btn-sm btn-outline remove-email-btn"
-                style="border-color:var(--expense);color:var(--expense);padding:2px 8px;"
-                data-email="${email}">✕</button>`;
+        ${isMe
+          ? `<span style="font-size:0.75rem;color:var(--text-muted);padding:2px 8px;">אני</span>`
+          : `<button class="btn btn-sm btn-outline remove-email-btn"
+                     style="border-color:var(--expense);color:var(--expense);padding:2px 8px;"
+                     data-email="${email}">✕</button>`}`;
       container.appendChild(row);
     });
     container.querySelectorAll('.remove-email-btn').forEach(btn => {
