@@ -139,7 +139,7 @@
             <thead>
               <tr>
                 <th>חודש</th><th>תיק השקעות</th><th>קרן כספית</th>
-                <th>חסכונות</th><th>סה"כ שווי נקי</th><th class="write-only"></th>
+                <th>חסכונות</th><th>סה"כ הוספה</th><th class="write-only"></th>
               </tr>
             </thead>
             <tbody id="nw-tbody"></tbody>
@@ -220,10 +220,13 @@ async function loadNetWorth() {
     });
 
     // Both allocation and manual entries are ADDITIVE — neither overrides the other.
-    // Each month's values are the running cumulative sum of all prior additions.
-    // Manual entries carry forward just like allocation entries.
+    // historyRows: one entry per source per month (for the table).
+    // chartPoints: one entry per month with combined cumulative (for charts & stat cards).
     let cumPortfolio = 0, cumCashFund = 0, cumSavings = 0;
-    const display = allMonths.map(month => {
+    const historyRows  = [];
+    const chartPoints  = [];
+
+    allMonths.forEach(month => {
       const add    = allocByMonth[month];
       const manual = manualMap[month];
 
@@ -231,60 +234,70 @@ async function loadNetWorth() {
         cumPortfolio += add.investments;
         cumCashFund  += add.cashFund;
         cumSavings   += add.savings;
+        historyRows.push({
+          month,
+          portfolio: add.investments,
+          cashFund:  add.cashFund,
+          savings:   add.savings,
+          total:     add.investments + add.cashFund + add.savings,
+          source:    'auto',
+          sheetRow:  null,
+        });
       }
       if (manual) {
         cumPortfolio += manual.portfolio;
         cumCashFund  += manual.cashFund;
         cumSavings   += manual.savings;
+        historyRows.push({
+          month,
+          portfolio: manual.portfolio,
+          cashFund:  manual.cashFund,
+          savings:   manual.savings,
+          total:     manual.portfolio + manual.cashFund + manual.savings,
+          source:    'manual',
+          sheetRow:  manual.sheetRow,
+        });
       }
 
-      const hasAuto   = !!add;
-      const hasManual = !!manual;
-      const source    = hasAuto && hasManual ? 'both' : hasManual ? 'manual' : 'auto';
-
-      return {
-        month,
-        portfolio: cumPortfolio,
-        cashFund:  cumCashFund,
-        savings:   cumSavings,
-        total:     cumPortfolio + cumCashFund + cumSavings,
-        source,
-        sheetRow: manual?.sheetRow ?? null,
-      };
+      if (add || manual) {
+        chartPoints.push({
+          month,
+          portfolio: cumPortfolio,
+          cashFund:  cumCashFund,
+          savings:   cumSavings,
+          total:     cumPortfolio + cumCashFund + cumSavings,
+        });
+      }
     });
 
-    // Stat cards — latest month's values
-    const latest = display[display.length - 1] || { portfolio: 0, cashFund: 0, savings: 0, total: 0 };
+    // Stat cards — final cumulative values
     document.getElementById('nw-stats').innerHTML = `
-      <div class="card" style="margin-bottom:0;"><div class="card-title">תיק השקעות</div><div class="card-value accent">${formatShekel(latest.portfolio)}</div></div>
-      <div class="card" style="margin-bottom:0;"><div class="card-title">קרן כספית</div><div class="card-value accent">${formatShekel(latest.cashFund)}</div></div>
-      <div class="card" style="margin-bottom:0;"><div class="card-title">חסכונות</div><div class="card-value accent">${formatShekel(latest.savings)}</div></div>
-      <div class="card" style="margin-bottom:0;"><div class="card-title">סה"כ שווי נקי</div><div class="card-value income">${formatShekel(latest.total)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">תיק השקעות</div><div class="card-value accent">${formatShekel(cumPortfolio)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">קרן כספית</div><div class="card-value accent">${formatShekel(cumCashFund)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">חסכונות</div><div class="card-value accent">${formatShekel(cumSavings)}</div></div>
+      <div class="card" style="margin-bottom:0;"><div class="card-title">סה"כ שווי נקי</div><div class="card-value income">${formatShekel(cumPortfolio + cumCashFund + cumSavings)}</div></div>
     `;
 
-    // Charts
-    if (display.length > 0) {
-      renderNetWorthLine('nw-total-chart', display.map(x => x.month), display.map(x => x.total));
+    // Charts — use combined cumulative points (one per month)
+    if (chartPoints.length > 0) {
+      renderNetWorthLine('nw-total-chart', chartPoints.map(x => x.month), chartPoints.map(x => x.total));
       renderNetWorthStackedArea('nw-breakdown-chart',
-        display.map(x => x.month),
-        display.map(x => x.portfolio),
-        display.map(x => x.cashFund),
-        display.map(x => x.savings)
+        chartPoints.map(x => x.month),
+        chartPoints.map(x => x.portfolio),
+        chartPoints.map(x => x.cashFund),
+        chartPoints.map(x => x.savings)
       );
     }
 
-    // History table
+    // History table — one row per source per month (auto and manual are separate rows)
     const tbody = document.getElementById('nw-tbody');
     tbody.innerHTML = '';
     const SOURCE_BADGE = {
       auto:   `<span style="font-size:0.68rem;background:var(--primary);color:#ecf0f1;padding:1px 6px;border-radius:3px;vertical-align:middle;">אוטומטי</span>`,
       manual: `<span style="font-size:0.68rem;background:var(--accent);color:#000;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;">ידני</span>`,
-      both:   `<span style="font-size:0.68rem;background:var(--primary);color:#ecf0f1;padding:1px 6px;border-radius:3px;vertical-align:middle;">אוטומטי</span>` +
-              `<span style="font-size:0.68rem;background:var(--accent);color:#000;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;margin-right:3px;">+ידני</span>`,
     };
 
-    display.forEach(item => {
-      const hasManual = item.sheetRow !== null;
+    historyRows.forEach(item => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td style="white-space:nowrap;">${escHtml(item.month)}
@@ -294,8 +307,8 @@ async function loadNetWorth() {
         <td class="amount-positive">${formatShekel(item.cashFund)}</td>
         <td class="amount-positive">${formatShekel(item.savings)}</td>
         <td class="amount-positive" style="font-weight:700;">${formatShekel(item.total)}</td>
-        <td class="write-only">${hasManual
-          ? `<button class="btn btn-sm btn-outline-danger delete-nw-btn" title="מחק רישום ידני" data-nw-row="${item.sheetRow}">מחק ידני</button>`
+        <td class="write-only">${item.source === 'manual'
+          ? `<button class="btn btn-sm btn-outline-danger delete-nw-btn" title="מחק רישום ידני" data-nw-row="${item.sheetRow}">מחק</button>`
           : ''}</td>`;
       tbody.appendChild(tr);
     });
