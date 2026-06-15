@@ -124,10 +124,13 @@
         const view = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS)
           .setIncludeFolders(false);
 
+        const appId = CONFIG.CLIENT_ID.split('-')[0];
+
         const picker = new google.picker.PickerBuilder()
           .addView(view)
           .setOAuthToken(token)
           .setDeveloperKey(CONFIG.API_KEY)
+          .setAppId(appId)
           .setLocale('iw')
           .setTitle('בחר גיליון')
           .setCallback(pickerCallback)
