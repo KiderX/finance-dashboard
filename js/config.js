@@ -11,11 +11,8 @@ const CONFIG = {
   /** Google Spreadsheet ID (the long string in the sheet URL) */
   SPREADSHEET_ID: '1FNS_3q1Pr4YogTl0z-0Jke3l7fNBDHd3MZLGWOxWC6s',
 
-  /** Only this email is allowed to log in with full write access */
-  ALLOWED_EMAIL: 'matandayan81@gmail.com',
-
-  /** Emails allowed in read-only mode (empty = only ALLOWED_EMAIL in readonly too) */
-  READONLY_ALLOWED_EMAILS: [],
+  /** Emails allowed to log in with full access */
+  ALLOWED_EMAILS: ['matandayan81@gmail.com', 'shakeddahari8@gmail.com'],
 
   /** Google OAuth 2.0 Client ID (safe to expose in frontend) */
   CLIENT_ID: '620598056888-3skoat2urtmpk57t37vb4i0tmrg3m6a9.apps.googleusercontent.com',

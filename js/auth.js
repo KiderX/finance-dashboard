@@ -65,9 +65,7 @@ const AuthManager = (() => {
    */
   function isEmailAllowed(email) {
     if (!email) return false;
-    if (email === CONFIG.ALLOWED_EMAIL) return true;
-    if (isReadOnly() && CONFIG.READONLY_ALLOWED_EMAILS.includes(email)) return true;
-    return false;
+    return CONFIG.ALLOWED_EMAILS.includes(email);
   }
 
   /**
@@ -111,19 +109,27 @@ const AuthManager = (() => {
       tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CONFIG.CLIENT_ID,
         scope,
-        callback: (tokenResponse) => {
+        callback: async (tokenResponse) => {
           if (tokenResponse.error) {
             if (rejectTokenPromise) {
               rejectTokenPromise(new Error(tokenResponse.error));
             }
             return;
           }
-          // Use the configured allowed email — the Sheet's own permissions
-          // enforce access control, so only the owner's token can read it.
-          const email = CONFIG.ALLOWED_EMAIL;
-          saveSession(tokenResponse.access_token, email, tokenResponse.expires_in || 3600);
-          if (resolveTokenPromise) {
-            resolveTokenPromise(email);
+          try {
+            const email = await fetchUserEmail(tokenResponse.access_token);
+            if (!isEmailAllowed(email)) {
+              if (rejectTokenPromise) {
+                rejectTokenPromise(new Error(`הגישה נדחתה: ${email} אינה מורשית.`));
+              }
+              return;
+            }
+            saveSession(tokenResponse.access_token, email, tokenResponse.expires_in || 3600);
+            if (resolveTokenPromise) {
+              resolveTokenPromise(email);
+            }
+          } catch (err) {
+            if (rejectTokenPromise) rejectTokenPromise(err);
           }
         },
       });
