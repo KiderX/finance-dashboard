@@ -344,6 +344,8 @@ a:hover { color: #FDE68A; text-decoration: none; }
   font-weight: 800;
   letter-spacing: -2px;
   line-height: 1;
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 .card-value.income {

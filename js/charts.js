@@ -28,13 +28,11 @@ const SAVINGS_THRESHOLDS = { good: 20, warn: 10 };
  * @returns {string}
  */
 function formatShekel(value) {
-  return (
-    '₪' +
-    Math.abs(value).toLocaleString('he-IL', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-  );
+  const abs = Math.abs(value).toLocaleString('he-IL', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return (value < 0 ? '-' : '') + '₪' + abs;
 }
 
 /**
