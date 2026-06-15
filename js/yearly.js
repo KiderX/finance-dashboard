@@ -228,7 +228,7 @@ async function loadYearly() {
       if (monthIdx === -1) return 0;
       return txData.slice(1)
         .filter(row => row[monthIdx] === m)
-        .reduce((s, row) => s + Math.max(0, parseFloat(row[amtIdx] || 0)), 0);
+        .reduce((s, row) => s + parseFloat(row[amtIdx] || 0), 0);
     });
 
     const profitArr = months.map((_, i) => incomeArr[i] - expenseArr[i]);
