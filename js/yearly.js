@@ -155,7 +155,12 @@ function renderESPPSummary(incomeMap, months, year) {
   }
 
   // Income sheet: חודש(0) | משכורת ראשונה(1) | משכורת שנייה(2) | בונוסים(3) | ESPP(4) | ...
+  const now   = new Date();
+  const curYM = now.getFullYear() * 12 + now.getMonth();
+
   const amounts = months.map(m => {
+    const [mm, yyyy] = m.split('/').map(Number);
+    if (yyyy * 12 + (mm - 1) > curYM) return 0; // month hasn't happened yet — ignore stale/leftover sheet data
     const r = incomeMap[m];
     return r ? parseFloat(r[4] || 0) : 0;
   });
