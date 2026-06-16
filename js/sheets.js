@@ -509,24 +509,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const ROLE_LABEL = { owner: 'בעלים', writer: 'עריכה', reader: 'צפייה', commenter: 'תגובות' };
+    const ROLE_STYLE = { owner: 'owner', writer: 'editor', reader: 'viewer', commenter: 'viewer' };
 
     permissions.forEach(p => {
       const email       = p.emailAddress || '';
       const role        = p.role || 'reader';
       const roleLabel   = ROLE_LABEL[role] || role;
+      const roleStyle   = ROLE_STYLE[role] || 'viewer';
       const isMe        = email.toLowerCase() === (currentUser || '').toLowerCase();
       const isFileOwner = role === 'owner';
 
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 0;';
+      row.className = `settings-user-row${isMe ? ' settings-user-row--me' : ''}`;
       row.innerHTML = `
-        <span style="flex:1;font-size:0.85rem;direction:ltr;unicode-bidi:isolate;text-align:right;">${email || '—'}</span>
-        ${isFileOwner
-          ? `<span style="font-size:0.72rem;background:var(--accent);color:#000;padding:2px 8px;border-radius:4px;font-weight:600;">בעלים</span>`
-          : `<span style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;">${roleLabel}</span>`}
-        ${isMe
-          ? `<span style="font-size:0.72rem;color:var(--text-muted);padding:2px 6px;">אני</span>`
-          : ''}
+        <span class="settings-role-dot settings-role-dot--${roleStyle}"></span>
+        <span class="settings-user-email" title="${email}">${email || '—'}</span>
+        <span class="badge badge-${roleStyle}">${roleLabel}</span>
         ${(isOwner && !isFileOwner && email)
           ? `<button class="btn btn-sm btn-outline remove-email-btn"
                      style="border-color:var(--expense);color:var(--expense);padding:2px 8px;"

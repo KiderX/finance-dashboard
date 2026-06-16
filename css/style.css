@@ -812,6 +812,48 @@ select optgroup {
 .badge-success { background: rgba(16,185,129,0.12);  color: var(--income);   border: 1px solid rgba(16,185,129,0.22); }
 .badge-danger  { background: rgba(244,63,94,0.12);   color: var(--expense);  border: 1px solid rgba(244,63,94,0.22); }
 .badge-warning { background: rgba(245,158,11,0.12);  color: var(--gold);     border: 1px solid rgba(245,158,11,0.22); }
+.badge-owner   { background: rgba(245,158,11,0.12);  color: var(--gold);        border: 1px solid rgba(245,158,11,0.25); }
+.badge-editor  { background: rgba(139,92,246,0.12);  color: var(--violet-lite); border: 1px solid rgba(139,92,246,0.25); }
+.badge-viewer  { background: rgba(100,116,139,0.12); color: var(--text-muted);  border: 1px solid rgba(100,116,139,0.22); }
+
+/* ── Settings: user permission rows ─────────────────────────── */
+.settings-user-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.settings-user-row--me {
+  background: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.22);
+}
+
+.settings-role-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.settings-role-dot--owner  { background: var(--gold);   box-shadow: 0 0 6px rgba(245, 158, 11, 0.55); }
+.settings-role-dot--editor { background: var(--violet); box-shadow: 0 0 6px rgba(139, 92, 246, 0.45); }
+.settings-role-dot--viewer { background: var(--text-muted); }
+
+.settings-user-email {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* ── Upload zone ─────────────────────────────────────────── */
 .upload-zone {
@@ -1490,6 +1532,10 @@ select optgroup {
 [data-theme="light"] .badge-info { background: rgba(245,158,11,0.1); color: var(--gold-dark); }
 [data-theme="light"] .badge-success { background: rgba(16,185,129,0.1); color: var(--income); }
 [data-theme="light"] .badge-danger { background: rgba(244,63,94,0.1); color: var(--expense); }
+[data-theme="light"] .badge-owner  { background: rgba(245,158,11,0.1); color: var(--gold-dark); }
+[data-theme="light"] .badge-editor { background: rgba(139,92,246,0.1); color: var(--violet-dark); }
+[data-theme="light"] .badge-viewer { background: rgba(100,116,139,0.1); color: var(--text-muted); }
+[data-theme="light"] .settings-user-row--me { background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.25); }
 
 [data-theme="light"] .error-msg { background: rgba(244,63,94,0.06); color: var(--expense); }
 [data-theme="light"] .success-msg { background: rgba(16,185,129,0.06); color: var(--income); }
