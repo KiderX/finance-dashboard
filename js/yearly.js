@@ -132,8 +132,10 @@ function detectRecurring(txData, year) {
   });
 }
 
-// ── ESPP yearly summary ───────────────────────────────────
-function renderESPPSummary(esppData, year) {
+// ── ESPP yearly summary ────────────────────────────────────
+// Sourced from the הכנסות (Income) sheet's ESPP column — there's no
+// dedicated ESPP entry page anymore, so this is a read-only rollup.
+function renderESPPSummary(incomeMap, months, year) {
   const container  = document.getElementById('espp-summary');
   const chartWrap  = document.getElementById('espp-yearly-chart-wrap');
   const legendRow  = document.getElementById('espp-yearly-legend');
@@ -152,36 +154,28 @@ function renderESPPSummary(esppData, year) {
     container.style.cssText = 'margin-bottom:12px;';
   }
 
-  if (!esppData || esppData.length < 2) {
-    showEmpty('אין נתוני ESPP');
-    return;
-  }
-
-  const rows = esppData.slice(1).filter(r => {
-    const d = r[0] || '';
-    return d.includes(`/${year}`) || d.endsWith(String(year));
+  // Income sheet: חודש(0) | משכורת ראשונה(1) | משכורת שנייה(2) | בונוסים(3) | ESPP(4) | ...
+  const amounts = months.map(m => {
+    const r = incomeMap[m];
+    return r ? parseFloat(r[4] || 0) : 0;
   });
+  const totalESPP   = amounts.reduce((s, a) => s + a, 0);
+  const monthsCount = amounts.filter(a => a > 0).length;
 
-  if (rows.length === 0) {
-    showEmpty(`אין מכירות ESPP ב-${year}`);
+  if (totalESPP === 0) {
+    showEmpty(`אין נתוני ESPP ב-${year}`);
     return;
   }
 
   restoreLayout();
 
-  const totalNet = rows.reduce((s, r) => s + parseFloat(r[5] || 0), 0);
-  const totalTax = rows.reduce((s, r) => s + parseFloat(r[4] || 0), 0);
-
   container.innerHTML = `
     <div class="d-flex gap-16" style="flex-wrap:wrap;">
-      <div><div class="text-muted" style="font-size:0.8rem;">מכירות</div><strong>${rows.length}</strong></div>
-      <div><div class="text-muted" style="font-size:0.8rem;">נטו</div><strong class="text-success">${formatShekel(totalNet)}</strong></div>
-      <div><div class="text-muted" style="font-size:0.8rem;">מס</div><strong class="text-danger">${formatShekel(totalTax)}</strong></div>
+      <div><div class="text-muted" style="font-size:0.8rem;">חודשים</div><strong>${monthsCount}</strong></div>
+      <div><div class="text-muted" style="font-size:0.8rem;">סה"כ ESPP</div><strong class="text-success">${formatShekel(totalESPP)}</strong></div>
     </div>`;
 
-  const dates   = rows.map(r => r[0] || '');
-  const amounts = rows.map(r => parseFloat(r[5] || 0));
-  if (dates.length > 0) renderESPPBar('espp-yearly-chart', dates, amounts);
+  renderESPPBar('espp-yearly-chart', MONTH_NAMES, amounts);
 }
 
 // ── Main load ─────────────────────────────────────────────
@@ -196,12 +190,11 @@ async function loadYearly() {
   document.getElementById('year-display').textContent = currentYear;
 
   try {
-    const [summaryData, allocData, txData, incomeData, esppData] = await Promise.all([
+    const [summaryData, allocData, txData, incomeData] = await Promise.all([
       SheetsAPI.getSheet(CONFIG.SHEETS.MONTHLY_SUMMARY),
       SheetsAPI.getSheet(CONFIG.SHEETS.PROFIT_ALLOCATION),
       SheetsAPI.getSheet(getTxSheet(currentYear)),
       SheetsAPI.getSheet(CONFIG.SHEETS.INCOME),
-      SheetsAPI.getSheet(CONFIG.SHEETS.ESPP),
     ]);
 
     const months   = monthsOfYear(currentYear);
@@ -287,7 +280,7 @@ async function loadYearly() {
     renderCategoryDonut('allocation-donut-chart', ['עו"ש', 'קרן כספית', 'השקעות', 'אחר'], allocTotals, 'allocation-donut-legend');
     renderYoYTable(incomeArr, expenseArr, prevIncomeArr, prevExpenseArr);
     detectRecurring(txData, currentYear);
-    renderESPPSummary(esppData, currentYear);
+    renderESPPSummary(incomeMap, months, currentYear);
 
     loading.classList.add('hidden');
     content.classList.remove('hidden');

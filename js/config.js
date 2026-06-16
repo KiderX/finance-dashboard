@@ -55,7 +55,6 @@ const CONFIG = {
     MONTHLY_SUMMARY: 'MonthlySummary',
     PROFIT_ALLOCATION: 'Allocation',
     NET_WORTH: 'NetWorth',
-    ESPP: 'ESPP',
     AUDIT_LOG: 'AuditLog',
     DASHBOARD: 'Dashboard',
   },

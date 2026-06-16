@@ -228,7 +228,6 @@ const SheetsAPI = (() => {
       { name: CONFIG.SHEETS.MONTHLY_SUMMARY,   headers: ['חודש','סה"כ הוצאות','סה"כ הכנסות','רווח','אחוז חיסכון'] },
       { name: CONFIG.SHEETS.PROFIT_ALLOCATION, headers: ['חודש','רווח','עו"ש','קרן כספית','השקעות','אחר','סה"כ מוקצה','הערות'] },
       { name: CONFIG.SHEETS.NET_WORTH,         headers: ['חודש','תיק השקעות','קרן כספית','חסכונות','סה"כ שווי נקי'] },
-      { name: CONFIG.SHEETS.ESPP,              headers: ['תאריך מכירה','מחיר מכירה','כמות מניות','סכום ברוטו','מס','סכום נטו','הערות'] },
       { name: CONFIG.SHEETS.AUDIT_LOG,         headers: ['תאריך העלאה','שם קובץ','מספר עסקאות','סכום כולל','משתמש','כפילויות שנדחו'] },
       { name: CONFIG.SHEETS.DASHBOARD,         headers: [] },
     ];

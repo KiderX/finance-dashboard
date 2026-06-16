@@ -436,7 +436,8 @@ function renderNetWorthLine(canvasId, months, values) {
         pointBorderWidth: 2,
         pointRadius: 4,        // always visible — anchors each month's real value on the curve
         pointHoverRadius: 7,
-        tension: 0.3,          // gentle wave without overshoot on sharp jumps between months
+        tension: 0.3,
+        cubicInterpolationMode: 'monotone', // never dips/rises between two equal or flat points
         fill: true,
       }],
     },
@@ -445,13 +446,13 @@ function renderNetWorthLine(canvasId, months, values) {
 }
 
 /**
- * Renders a bar chart of ESPP net income by sale date.
+ * Renders a bar chart of ESPP income by month.
  * @param {string} canvasId
- * @param {string[]} dates
+ * @param {string[]} labels
  * @param {number[]} amounts
  * @returns {Chart}
  */
-function renderESPPBar(canvasId, dates, amounts) {
+function renderESPPBar(canvasId, labels, amounts) {
   const canvas = prepareCanvas(canvasId);
   const ctx    = canvas.getContext('2d');
   const opts   = defaultOptions();
@@ -464,10 +465,10 @@ function renderESPPBar(canvasId, dates, amounts) {
   return new Chart(canvas, {
     type: 'bar',
     data: {
-      labels: dates,
+      labels,
       datasets: [
         {
-          label: 'ESPP נטו',
+          label: 'ESPP',
           data: amounts,
           backgroundColor: (context) => {
             const { chartArea } = context.chart;
@@ -524,7 +525,8 @@ function renderNetWorthStackedArea(canvasId, months, portfolio, cashFund, saving
     pointRadius: 3,         // always visible — anchors each month's real value on the curve
     pointHoverRadius: 6,
     pointStyle: 'circle',  // forces legend to show a dot, not a filled-area rectangle
-    tension: 0.3,          // gentle wave without overshoot on sharp jumps between months
+    tension: 0.3,
+    cubicInterpolationMode: 'monotone', // never dips/rises between two equal or flat points
     fill: true,
   });
 

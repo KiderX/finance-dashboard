@@ -83,7 +83,6 @@ Both APIs are required. Sheets API reads and writes transaction data. Drive API 
 | `MonthlySummary` | Auto-calculated monthly totals |
 | `Allocation` | Monthly profit allocation (checking, funds, investments) |
 | `NetWorth` | Monthly net worth snapshots |
-| `ESPP` | ESPP sale records |
 | `AuditLog` | Upload history log |
 
 > **Transaction tabs are created automatically** by the app the first time you upload or view a year. You only need to create the other tabs manually.
@@ -108,11 +107,6 @@ Both APIs are required. Sheets API reads and writes transaction data. Drive API 
 **`NetWorth`**
 ```
 חודש | תיק השקעות | קרן כספית | חסכונות | סה"כ שווי נקי
-```
-
-**`ESPP`**
-```
-תאריך מכירה | מחיר מכירה | כמות מניות | סכום ברוטו | מס | סכום נטו | הערות
 ```
 
 **`AuditLog`**
