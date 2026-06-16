@@ -499,7 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (desc) {
       desc.textContent = isOwner
         ? 'הוסף מייל ולחץ הזמן — הגישה תינתן בגיליון וקישור הגדרה יועתק ללוח.'
-        : 'רק הבעלים יכול לנהל משתמשים.';
+        : 'רק המנהל יכול לנהל משתמשים.';
     }
 
     container.innerHTML = '';
@@ -508,7 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const ROLE_LABEL = { owner: 'בעלים', writer: 'עריכה', reader: 'צפייה', commenter: 'תגובות' };
+    const ROLE_LABEL = { owner: 'מנהל', writer: 'עריכה', reader: 'צפייה', commenter: 'תגובות' };
     const ROLE_STYLE = { owner: 'owner', writer: 'editor', reader: 'viewer', commenter: 'viewer' };
 
     permissions.sort((a, b) => (a.role === 'owner' ? -1 : 0) - (b.role === 'owner' ? -1 : 0));
