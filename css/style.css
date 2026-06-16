@@ -468,6 +468,24 @@ tbody td { padding: 11px 14px; text-align: right; vertical-align: middle; }
   letter-spacing: -0.3px;
 }
 
+/* Isolate signed shekel totals from the surrounding RTL paragraph so the
+   bidi algorithm can't move the minus sign to the wrong side when negative */
+#income-total-cell,
+#expenses-total-cell,
+#allocation-total-cell {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: right;
+}
+
+#profit-to-allocate,
+#allocation-modal-profit,
+#allocation-modal-total,
+#income-modal-total {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
 /* ── Category hierarchy ──────────────────────────────────── */
 
 /* Group header: styled like income rows but with subtle top separator */
