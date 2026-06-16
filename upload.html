@@ -120,8 +120,8 @@
       <div class="card">
         <div class="card-title">בחירת חודש</div>
         <div class="form-group" style="max-width:240px;">
-          <label>חודש העסקאות (MM/YYYY)</label>
-          <input type="text" id="month-select" placeholder="MM/YYYY" pattern="\d{2}/\d{4}" />
+          <label>חודש העסקאות</label>
+          <input type="month" id="month-select" />
         </div>
         <button class="btn btn-primary" id="upload-btn">העלה לגוגל שיטס ▶</button>
         <div id="upload-result" class="mt-16"></div>
@@ -155,8 +155,8 @@
     <p class="text-muted mb-16" style="font-size:0.85rem;">לתשלומים בחשבון בנק, מזומן, ביט וכו׳</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div class="form-group mb-0">
-        <label>תאריך (DD/MM/YYYY)</label>
-        <input type="text" id="manual-date" placeholder="DD/MM/YYYY" style="direction:ltr;" />
+        <label>תאריך</label>
+        <input type="date" id="manual-date" style="direction:ltr;" />
       </div>
       <div class="form-group mb-0">
         <label>סכום (₪)</label>

@@ -577,7 +577,7 @@ function openManualEntryModal() {
   const today  = new Date();
   const [mm, yyyy] = currentMonth.split('/');
   const dd = String(today.getDate()).padStart(2, '0');
-  document.getElementById('dash-manual-date').value     = `${dd}/${mm}/${yyyy}`;
+  document.getElementById('dash-manual-date').value     = `${yyyy}-${mm}-${dd}`;
   document.getElementById('dash-manual-merchant').value = '';
   document.getElementById('dash-manual-amount').value   = '';
   document.getElementById('dash-manual-notes').value    = '';
@@ -600,9 +600,9 @@ async function saveManualEntry(closeAfter) {
   const amount = parseFloat(amtStr.replace(/[₪,\s]/g, ''));
   if (isNaN(amount)) { alert('סכום לא תקין'); return; }
 
-  const parts = dateVal.split('/');
+  const parts = dateVal.split('-'); // <input type="date"> gives YYYY-MM-DD
   const date  = parts.length === 3
-    ? `${parts[0].padStart(2,'0')}/${parts[1].padStart(2,'0')}/${parts[2]}`
+    ? `${parts[2]}/${parts[1]}/${parts[0]}`
     : dateVal;
   const month = date.length >= 10 ? `${date.substring(3,5)}/${date.substring(6)}` : currentMonth;
   const hash  = generateHash(date, merchant, amount);

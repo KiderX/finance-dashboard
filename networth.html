@@ -63,8 +63,8 @@
       </p>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
         <div class="form-group">
-          <label>חודש (MM/YYYY)</label>
-          <input type="text" id="nw-month" placeholder="MM/YYYY" />
+          <label>חודש</label>
+          <input type="month" id="nw-month" />
         </div>
         <div class="form-group">
           <label>תיק השקעות — הוספה ידנית (₪)</label>
@@ -336,16 +336,18 @@ async function saveNetWorth() {
   btn.disabled = true;
   btn.textContent = 'שומר...';
 
-  const month     = document.getElementById('nw-month').value.trim();
+  const monthRaw  = document.getElementById('nw-month').value.trim(); // YYYY-MM from <input type="month">
   const portfolio = parseFloat(document.getElementById('nw-portfolio').value || 0);
   const cashFund  = parseFloat(document.getElementById('nw-cashfund').value || 0);
   const savings   = parseFloat(document.getElementById('nw-savings').value || 0);
 
-  if (!month || !/^\d{2}\/\d{4}$/.test(month)) {
-    msg.innerHTML = '<span class="text-danger">יש להזין חודש בפורמט MM/YYYY</span>';
+  if (!monthRaw) {
+    msg.innerHTML = '<span class="text-danger">יש לבחור חודש</span>';
     btn.disabled = false; btn.textContent = 'שמור';
     return;
   }
+  const [my, mm] = monthRaw.split('-');
+  const month = `${mm}/${my}`;
 
   const total = portfolio + cashFund + savings;
 
@@ -383,7 +385,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Pre-fill current month
   const now = new Date();
   document.getElementById('nw-month').value =
-    `${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+    `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 
   document.getElementById('toggle-form-btn').addEventListener('click', () =>
     document.getElementById('add-form').classList.toggle('hidden'));

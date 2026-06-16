@@ -649,6 +649,21 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
 }
 
+/* Hide the up/down stepper arrows on number inputs */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Hints the browser to render native popups (select dropdowns, date pickers)
+   in the matching theme — otherwise optgroup labels render with a white
+   background that's unreadable on the dark theme. */
+select, input { color-scheme: dark; }
+
 select option { background: #0A1020; color: var(--text); }
 
 .input-inline {
@@ -1371,6 +1386,9 @@ select option { background: #0A1020; color: var(--text); }
   border-color: rgba(245,158,11,0.45);
   box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
 }
+[data-theme="light"] select,
+[data-theme="light"] input { color-scheme: light; }
+[data-theme="light"] select option { background: #FFFFFF; color: var(--text); }
 
 [data-theme="light"] .spinner { border-color: rgba(245,158,11,0.1); border-top-color: var(--gold); }
 

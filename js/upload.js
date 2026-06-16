@@ -564,7 +564,10 @@ async function runDuplicateCheck() {
 function initMonthSelect() {
   const detected = UploadState.rows[0]?.['חודש'] || '';
   const input    = document.getElementById('month-select');
-  if (detected) input.value = detected;
+  if (detected) {
+    const [mm, yyyy] = detected.split('/'); // app format MM/YYYY → <input type="month"> wants YYYY-MM
+    input.value = (mm && yyyy) ? `${yyyy}-${mm}` : '';
+  }
 }
 
 // ── Step 5: Upload ────────────────────────────────────────
@@ -575,8 +578,10 @@ async function doUpload() {
   msgDiv.innerHTML = '';
 
   try {
-    const month = document.getElementById('month-select').value.trim();
-    if (!month || !/^\d{2}\/\d{4}$/.test(month)) throw new Error('יש להזין חודש בפורמט MM/YYYY');
+    const monthRaw = document.getElementById('month-select').value.trim(); // YYYY-MM from <input type="month">
+    if (!monthRaw) throw new Error('יש לבחור חודש');
+    const [my, mm] = monthRaw.split('-');
+    const month = `${mm}/${my}`;
 
     const toUpload = UploadState.rows
       .filter((_, idx) => !UploadState.duplicates.has(idx))
@@ -630,7 +635,7 @@ function openManualEntryModal() {
   const dd = String(today.getDate()).padStart(2, '0');
   const mm = String(today.getMonth() + 1).padStart(2, '0');
   const yyyy = today.getFullYear();
-  document.getElementById('manual-date').value     = `${dd}/${mm}/${yyyy}`;
+  document.getElementById('manual-date').value     = `${yyyy}-${mm}-${dd}`;
   document.getElementById('manual-merchant').value = '';
   document.getElementById('manual-amount').value   = '';
   document.getElementById('manual-notes').value    = '';
@@ -654,7 +659,8 @@ function saveManualEntry() {
   const amount = parseFloat(amtRaw.replace(/[₪,\s]/g, ''));
   if (isNaN(amount)) { alert('סכום לא תקין'); return; }
 
-  const date  = parseCalDate(dateRaw) || dateRaw;
+  const isoParts = dateRaw.split('-'); // <input type="date"> gives YYYY-MM-DD
+  const date  = isoParts.length === 3 ? `${isoParts[2]}/${isoParts[1]}/${isoParts[0]}` : dateRaw;
   const month = date.length >= 10 ? `${date.substring(3, 5)}/${date.substring(6)}` : '';
 
   const row = {
