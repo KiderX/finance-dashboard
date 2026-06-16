@@ -520,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 0;';
       row.innerHTML = `
-        <span style="flex:1;font-size:0.85rem;direction:ltr;unicode-bidi:isolate;">${email || '—'}</span>
+        <span style="flex:1;font-size:0.85rem;direction:ltr;unicode-bidi:isolate;text-align:right;">${email || '—'}</span>
         ${isFileOwner
           ? `<span style="font-size:0.72rem;background:var(--accent);color:#000;padding:2px 8px;border-radius:4px;font-weight:600;">בעלים</span>`
           : `<span style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;">${roleLabel}</span>`}
