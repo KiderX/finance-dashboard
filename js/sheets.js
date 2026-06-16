@@ -511,6 +511,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const ROLE_LABEL = { owner: 'בעלים', writer: 'עריכה', reader: 'צפייה', commenter: 'תגובות' };
     const ROLE_STYLE = { owner: 'owner', writer: 'editor', reader: 'viewer', commenter: 'viewer' };
 
+    permissions.sort((a, b) => (a.role === 'owner' ? -1 : 0) - (b.role === 'owner' ? -1 : 0));
+
     permissions.forEach(p => {
       const email       = p.emailAddress || '';
       const role        = p.role || 'reader';
