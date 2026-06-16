@@ -174,18 +174,11 @@ function renderESPPSummary(incomeMap, months, year) {
 
   restoreLayout();
 
-  const monthRows = months
-    .map((m, i) => ({ name: MONTH_NAMES[i], amount: amounts[i] }))
-    .filter(x => x.amount > 0)
-    .map(x => `<li><span>${x.name}</span><span class="amount-positive">${formatShekel(x.amount)}</span></li>`)
-    .join('');
-
   container.innerHTML = `
-    <div class="d-flex gap-16" style="flex-wrap:wrap;margin-bottom:8px;">
+    <div class="d-flex gap-16" style="flex-wrap:wrap;">
       <div><div class="text-muted" style="font-size:0.8rem;">חודשים</div><strong>${monthsCount}</strong></div>
       <div><div class="text-muted" style="font-size:0.8rem;">סה"כ ESPP</div><strong class="text-success">${formatShekel(totalESPP)}</strong></div>
-    </div>
-    <ul class="espp-months-list">${monthRows}</ul>`;
+    </div>`;
 
   renderESPPBar('espp-yearly-chart', MONTH_NAMES, amounts);
 }
