@@ -249,17 +249,18 @@ function renderCategoryDonut(canvasId, labels, data, legendContainerId) {
       const { ctx, chartArea: { left, top, width, height } } = chart;
       const cx  = left + width / 2;
       const cy  = top  + height / 2;
-      const i   = active[0].index;
-      const lbl = chart.data.labels[i];
-      const val = chart.data.datasets[0].data[i];
+      const i       = active[0].index;
+      const lbl     = chart.data.labels[i];
+      const val     = chart.data.datasets[0].data[i];
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
       ctx.save();
       ctx.textAlign    = 'center';
       ctx.textBaseline = 'middle';
       ctx.font         = '500 10px Heebo, sans-serif';
-      ctx.fillStyle    = '#64748B';
+      ctx.fillStyle    = isLight ? '#475569' : '#64748B';
       ctx.fillText(lbl, cx, cy - 11);
       ctx.font         = '700 14px Heebo, sans-serif';
-      ctx.fillStyle    = '#F1F5F9';
+      ctx.fillStyle    = isLight ? '#0F172A' : '#F1F5F9';
       ctx.fillText(formatShekel(val), cx, cy + 8);
       ctx.restore();
     },
