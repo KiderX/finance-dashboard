@@ -518,10 +518,13 @@ function renderNetWorthStackedArea(canvasId, months, portfolio, cashFund, saving
       return g;
     },
     borderWidth: 2,
-    pointRadius: 0,
-    pointHoverRadius: 5,
+    pointBackgroundColor: color,
+    pointBorderColor: '#050B18',
+    pointBorderWidth: 2,
+    pointRadius: 3,         // always visible — anchors each month's real value on the curve
+    pointHoverRadius: 6,
     pointStyle: 'circle',  // forces legend to show a dot, not a filled-area rectangle
-    tension: 0.45,
+    tension: 0.3,          // gentle wave without overshoot on sharp jumps between months
     fill: true,
   });
 
