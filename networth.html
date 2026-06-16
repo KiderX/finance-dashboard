@@ -131,7 +131,7 @@
       <div class="card" style="margin-top:32px;">
         <div class="card-title">היסטוריה</div>
         <div class="table-wrapper">
-          <table>
+          <table class="rwd-table">
             <thead>
               <tr>
                 <th>חודש</th><th>תיק השקעות</th><th>קרן כספית</th>
@@ -309,13 +309,13 @@ async function loadNetWorth() {
     historyRows.forEach(item => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td style="white-space:nowrap;">${escHtml(item.month)}
+        <td data-label="חודש" style="white-space:nowrap;">${escHtml(item.month)}
           <span style="margin-right:6px;">${SOURCE_BADGE[item.source] || ''}</span>
         </td>
-        <td class="amount-positive">${formatShekel(item.portfolio)}</td>
-        <td class="amount-positive">${formatShekel(item.cashFund)}</td>
-        <td class="amount-positive">${formatShekel(item.savings)}</td>
-        <td class="amount-positive" style="font-weight:700;">${formatShekel(item.total)}</td>
+        <td data-label="תיק השקעות" class="amount-positive">${formatShekel(item.portfolio)}</td>
+        <td data-label="קרן כספית" class="amount-positive">${formatShekel(item.cashFund)}</td>
+        <td data-label="חסכונות" class="amount-positive">${formatShekel(item.savings)}</td>
+        <td data-label="ערך" class="amount-positive" style="font-weight:700;">${formatShekel(item.total)}</td>
         <td class="write-only">${item.source === 'manual'
           ? `<button class="btn btn-sm btn-outline-danger delete-nw-btn" title="מחק רישום ידני" data-nw-row="${item.sheetRow}">מחק</button>`
           : ''}</td>`;

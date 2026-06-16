@@ -22,6 +22,16 @@ const CHART_COLORS = {
 
 const SAVINGS_THRESHOLDS = { good: 20, warn: 10 };
 
+/* Hebrew month names are long ("אוקטובר", "ספטמבר") and crowd a 12-point
+   x-axis on narrow screens — abbreviate them there while keeping the
+   full name in the tooltip (tooltip title pulls from chart.data.labels,
+   not from this tick callback). */
+const MONTH_ABBR = {
+  'ינואר': 'ינו', 'פברואר': 'פבר', 'מרץ': 'מרץ', 'אפריל': 'אפר',
+  'מאי': 'מאי', 'יוני': 'יונ', 'יולי': 'יול', 'אוגוסט': 'אוג',
+  'ספטמבר': 'ספט', 'אוקטובר': 'אוק', 'נובמבר': 'נוב', 'דצמבר': 'דצמ',
+};
+
 /**
  * Formats a number as Israeli Shekel currency.
  * @param {number} value
@@ -124,7 +134,19 @@ function defaultScales(yCallback) {
     border: { display: false },
   };
   return {
-    x: { ...base },
+    x: {
+      ...base,
+      ticks: {
+        ...base.ticks,
+        maxRotation: 0,
+        minRotation: 0,
+        autoSkipPadding: 10,
+        callback(value) {
+          const label = this.getLabelForValue(value);
+          return (window.innerWidth <= 480 && MONTH_ABBR[label]) ? MONTH_ABBR[label] : label;
+        },
+      },
+    },
     y: { ...base, ticks: { ...base.ticks, callback: yCallback || ((v) => v) } },
   };
 }

@@ -1144,10 +1144,23 @@ select optgroup {
   .sidebar { transform: translateX(100%); }
   .sidebar.open { transform: translateX(0); }
   .main-content { margin-right: 0; max-width: 100vw; padding: 16px; }
-  .hamburger { display: block; }
+  .hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+  .modal-close-btn { width: 40px; height: 40px; }
   .dashboard-grid { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .steps { flex-direction: column; }
+}
+
+/* Touch targets — bump compact buttons to a comfortable tap size on phones */
+@media (max-width: 480px) {
+  .btn-sm { padding: 10px 16px; min-height: 40px; }
 }
 
 @media (max-width: 480px) {
@@ -1155,6 +1168,74 @@ select optgroup {
   .login-card { padding: 32px 20px; }
   .card-value { font-size: 1.6rem; letter-spacing: -0.5px; }
   .stats-grid .card-value { font-size: 1.5rem; letter-spacing: -0.5px; }
+}
+
+/* ── Wide tables → stacked cards on mobile ───────────────────
+   Each <td> keeps its data-label attribute; the label renders
+   above the value via ::before so the row reads like a mini card
+   instead of forcing horizontal scroll. */
+@media (max-width: 700px) {
+  .rwd-table thead { display: none; }
+  .rwd-table, .rwd-table tbody, .rwd-table tfoot,
+  .rwd-table tr, .rwd-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .rwd-table tbody tr,
+  .rwd-table tfoot tr {
+    margin-bottom: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+  }
+  .rwd-table tbody tr:last-child { margin-bottom: 0; }
+  .rwd-table tr:has(> td[colspan]) {
+    border: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .rwd-table td {
+    padding: 6px 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.07);
+  }
+  .rwd-table td:last-child { border-bottom: none; }
+  .rwd-table td[colspan] { border-bottom: none; }
+
+  .rwd-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  /* action cells (no data-label): center the button(s), collapse if empty */
+  .rwd-table td:not([data-label]):not([colspan]) {
+    text-align: center;
+    padding-top: 10px;
+  }
+  .rwd-table td:not([data-label]):not([colspan]):empty { display: none; }
+
+  .rwd-table .input-inline { width: 100%; }
+  .rwd-table-compact tbody td { padding: 4px 0; }
+
+  /* preserve the gold "total" highlight as its own card on mobile */
+  .rwd-table tr.total-row {
+    background: linear-gradient(
+      to left,
+      rgba(245, 158, 11, 0.13) 0%,
+      rgba(245, 158, 11, 0.05) 55%,
+      transparent 100%
+    );
+    border-color: rgba(245, 158, 11, 0.35);
+  }
+  .rwd-table tr.total-row td:first-child { padding-right: 0 !important; }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1373,6 +1454,10 @@ select optgroup {
 [data-theme="light"] tbody tr { border-bottom-color: rgba(0,0,0,0.04); }
 [data-theme="light"] tbody tr:hover { background: rgba(245,158,11,0.04) !important; }
 [data-theme="light"] td { color: var(--text); }
+
+@media (max-width: 700px) {
+  [data-theme="light"] .rwd-table td { border-bottom-color: rgba(0,0,0,0.08); }
+}
 
 [data-theme="light"] .total-row {
   background: linear-gradient(
@@ -1737,6 +1822,15 @@ body.sidebar-collapsed-mode .sidebar-footer .btn:not(#settings-btn):not(#theme-t
   .chart-container-hero { height: 200px; }
   .chart-container-md   { height: 160px; }
   .chart-container-sm   { height: 140px; }
+}
+
+/* Phones: give the 12-month bar/line charts a bit more room back so the
+   y-axis ₪ ticks and abbreviated month labels don't get squished. */
+@media (max-width: 480px) {
+  .card:has(#income-expense-chart) .chart-container { height: 220px; }
+  .chart-container-hero { height: 230px; }
+  .chart-container-md   { height: 200px; }
+  .chart-container-sm   { height: 170px; }
 }
 
 /* ── Donut chart side legend ────────────────────────────────────────── */

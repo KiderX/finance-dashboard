@@ -382,12 +382,12 @@ function renderTransactions(transactions) {
     tr.dataset.rowIndex = fullIdx;
     tr.dataset.hash     = hash || '';
     tr.innerHTML = `
-      <td>${escHtml(date||'')}</td>
-      <td>${escHtml(merchant||'')}</td>
-      <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>
-      <td>${escHtml(category||'')}</td>
-      <td class="text-muted">${escHtml(type||'')}</td>
-      <td class="text-muted">${escHtml(notes||'')}</td>
+      <td data-label="תאריך">${escHtml(date||'')}</td>
+      <td data-label="שם בית עסק">${escHtml(merchant||'')}</td>
+      <td data-label="סכום" class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>
+      <td data-label="קטגוריה">${escHtml(category||'')}</td>
+      <td data-label="סוג" class="text-muted">${escHtml(type||'')}</td>
+      <td data-label="הערות" class="text-muted">${escHtml(notes||'')}</td>
       <td class="write-only">
         <button class="btn btn-sm btn-outline-danger delete-txn-btn" title="מחק עסקה">מחק</button>
       </td>`;
