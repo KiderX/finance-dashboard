@@ -1686,3 +1686,19 @@ body.sidebar-collapsed-mode .sidebar-footer .btn:not(#settings-btn):not(#theme-t
   gap: 6px 20px;
   margin-bottom: 12px;
 }
+
+/* Clickable legend dot — toggles the matching chart wave on/off (e.g. פירוט לפי נכס) */
+.donut-legend-item.legend-toggle {
+  cursor: pointer;
+  user-select: none;
+  border-radius: 6px;
+  padding: 2px 4px;
+  transition: opacity 0.2s ease;
+}
+.donut-legend-item.legend-toggle:hover { opacity: 0.85; }
+.donut-legend-item.legend-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.donut-legend-item.legend-toggle.is-off { opacity: 0.4; }
+.donut-legend-item.legend-toggle.is-off .donut-legend-dot { box-shadow: none; }

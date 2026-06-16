@@ -496,7 +496,7 @@ function renderNetWorthStackedArea(canvasId, months, portfolio, cashFund, saving
   const canvas = prepareCanvas(canvasId);
   const opts   = defaultOptions();
   opts.scales  = defaultScales((v) => formatShekel(v));
-  opts.plugins.legend.display = true;
+  opts.plugins.legend.display = false; // replaced by the clickable glowing-dot legend in the page
   opts.plugins.tooltip.callbacks = {
     label: (c) => `${c.dataset.label}: ${formatShekel(c.parsed.y)}`,
   };
