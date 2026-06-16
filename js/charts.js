@@ -434,9 +434,9 @@ function renderNetWorthLine(canvasId, months, values) {
         pointBackgroundColor: CHART_COLORS.income,
         pointBorderColor: '#050B18',
         pointBorderWidth: 2,
-        pointRadius: 0,       // hidden by default — gives a continuous wave look
-        pointHoverRadius: 6,  // visible on hover
-        tension: 0.45,
+        pointRadius: 4,        // always visible — anchors each month's real value on the curve
+        pointHoverRadius: 7,
+        tension: 0.3,          // gentle wave without overshoot on sharp jumps between months
         fill: true,
       }],
     },
