@@ -628,6 +628,7 @@ label {
 input[type="text"],
 input[type="number"],
 input[type="date"],
+input[type="month"],
 input[type="email"],
 select,
 textarea {
@@ -649,6 +650,21 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
 }
 
+/* Native date/month picker icon — recolor to match the gold accent instead
+   of the browser's default dark glyph (invisible on the dark theme). */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.65) sepia(1) saturate(4) hue-rotate(5deg);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 3px;
+  transition: background 0.2s;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="month"]::-webkit-calendar-picker-indicator:hover {
+  background: rgba(245, 158, 11, 0.15);
+}
+
 /* Hide the up/down stepper arrows on number inputs */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
@@ -665,6 +681,14 @@ input[type="number"] {
 select, input { color-scheme: dark; }
 
 select option { background: #0A1020; color: var(--text); }
+
+/* Chrome stops auto dark-adapting an unstyled <optgroup> as soon as the
+   <select>/<option> have any author colors — so it must be styled explicitly. */
+select optgroup {
+  background: #0A1020;
+  color: var(--accent);
+  font-weight: 700;
+}
 
 .input-inline {
   background: transparent;
@@ -1373,6 +1397,7 @@ select option { background: #0A1020; color: var(--text); }
 [data-theme="light"] input[type="text"],
 [data-theme="light"] input[type="number"],
 [data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="month"],
 [data-theme="light"] input[type="email"],
 [data-theme="light"] select,
 [data-theme="light"] textarea {
@@ -1386,9 +1411,18 @@ select option { background: #0A1020; color: var(--text); }
   border-color: rgba(245,158,11,0.45);
   box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
 }
+[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="light"] input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: none;
+}
+[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator:hover,
+[data-theme="light"] input[type="month"]::-webkit-calendar-picker-indicator:hover {
+  background: rgba(245,158,11,0.12);
+}
 [data-theme="light"] select,
 [data-theme="light"] input { color-scheme: light; }
 [data-theme="light"] select option { background: #FFFFFF; color: var(--text); }
+[data-theme="light"] select optgroup { background: #FFFFFF; color: var(--accent); }
 
 [data-theme="light"] .spinner { border-color: rgba(245,158,11,0.1); border-top-color: var(--gold); }
 
