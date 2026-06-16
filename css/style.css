@@ -29,6 +29,8 @@
   --secondary:   var(--income);
   --danger:      var(--expense);
   --card:        transparent;
+  --card-solid:  #11151f; /* opaque approximation of .card, for sticky table columns */
+  --total-solid: #2f2818; /* opaque approximation of .total-row's gradient start */
 
   /* ── Text ── */
   --text:        #F1F5F9;
@@ -651,6 +653,7 @@ input[type="email"],
 select,
 textarea {
   width: 100%;
+  min-width: 0;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-sm);
@@ -1092,6 +1095,30 @@ select optgroup {
   line-height: 1;
 }
 
+/* ── Sidebar close button + backdrop (mobile only) ──────────
+   The sidebar slides in over the hamburger button itself, so once
+   open there's nothing left to tap to close it without these. */
+.sidebar-close-btn {
+  display: none;
+  margin-inline-start: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 90;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.sidebar-overlay.show { display: block; opacity: 1; }
+
 /* ── Scrollbar ───────────────────────────────────────────── */
 ::-webkit-scrollbar         { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track   { background: transparent; }
@@ -1152,6 +1179,11 @@ select optgroup {
     height: 44px;
     padding: 0;
   }
+  .sidebar-close-btn {
+    display: flex;
+    width: 44px;
+    height: 44px;
+  }
   .modal-close-btn { width: 40px; height: 40px; }
   .dashboard-grid { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1170,72 +1202,35 @@ select optgroup {
   .stats-grid .card-value { font-size: 1.5rem; letter-spacing: -0.5px; }
 }
 
-/* ── Wide tables → stacked cards on mobile ───────────────────
-   Each <td> keeps its data-label attribute; the label renders
-   above the value via ::before so the row reads like a mini card
-   instead of forcing horizontal scroll. */
+/* ── Wide tables → horizontal scroll with a pinned first column ──────
+   Real <table> markup is kept (numbers stay aligned in straight columns,
+   which reads far better than stacked cards for dense financial data).
+   .table-wrapper already scrolls horizontally; the first cell of every
+   row stays pinned to the trailing (right, RTL) edge while the rest of
+   the row scrolls underneath it — that needs an opaque background or
+   the other columns' text bleeds through as they pass beneath it. */
 @media (max-width: 700px) {
-  .rwd-table thead { display: none; }
-  .rwd-table, .rwd-table tbody, .rwd-table tfoot,
-  .rwd-table tr, .rwd-table td {
-    display: block;
-    width: 100%;
+  .rwd-table { width: max-content; min-width: 100%; }
+  .rwd-table thead th,
+  .rwd-table tbody td,
+  .rwd-table tfoot td {
+    padding: 9px 10px;
+    font-size: 0.82rem;
   }
 
-  .rwd-table tbody tr,
-  .rwd-table tfoot tr {
-    margin-bottom: 10px;
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface-2);
+  .rwd-table th:first-child,
+  .rwd-table td:first-child {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: var(--card-solid);
+    box-shadow: -8px 0 10px -8px rgba(0, 0, 0, 0.45);
   }
-  .rwd-table tbody tr:last-child { margin-bottom: 0; }
-  .rwd-table tr:has(> td[colspan]) {
-    border: none;
-    background: transparent;
-    padding: 0;
-  }
-
-  .rwd-table td {
-    padding: 6px 0;
-    border-bottom: 1px dashed rgba(255, 255, 255, 0.07);
-  }
-  .rwd-table td:last-child { border-bottom: none; }
-  .rwd-table td[colspan] { border-bottom: none; }
-
-  .rwd-table td[data-label]::before {
-    content: attr(data-label);
-    display: block;
-    color: var(--text-muted);
-    font-size: 0.66rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-  }
-
-  /* action cells (no data-label): center the button(s), collapse if empty */
-  .rwd-table td:not([data-label]):not([colspan]) {
-    text-align: center;
-    padding-top: 10px;
-  }
-  .rwd-table td:not([data-label]):not([colspan]):empty { display: none; }
+  .rwd-table tr.total-row td:first-child { background: var(--total-solid); }
 
   .rwd-table .input-inline { width: 100%; }
-  .rwd-table-compact tbody td { padding: 4px 0; }
-
-  /* preserve the gold "total" highlight as its own card on mobile */
-  .rwd-table tr.total-row {
-    background: linear-gradient(
-      to left,
-      rgba(245, 158, 11, 0.13) 0%,
-      rgba(245, 158, 11, 0.05) 55%,
-      transparent 100%
-    );
-    border-color: rgba(245, 158, 11, 0.35);
-  }
-  .rwd-table tr.total-row td:first-child { padding-right: 0 !important; }
+  .rwd-table-compact thead th,
+  .rwd-table-compact tbody td { padding: 6px 8px; }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1403,6 +1398,8 @@ select optgroup {
   --border:     rgba(0, 0, 0, 0.08);
   --glow-gold:   0 4px 20px rgba(245, 158, 11, 0.14);
   --glow-income: 0 4px 14px rgba(16, 185, 129, 0.1);
+  --card-solid:  #fcfdfe;
+  --total-solid: #fbf4e6;
 }
 
 [data-theme="light"] body {
@@ -1454,10 +1451,6 @@ select optgroup {
 [data-theme="light"] tbody tr { border-bottom-color: rgba(0,0,0,0.04); }
 [data-theme="light"] tbody tr:hover { background: rgba(245,158,11,0.04) !important; }
 [data-theme="light"] td { color: var(--text); }
-
-@media (max-width: 700px) {
-  [data-theme="light"] .rwd-table td { border-bottom-color: rgba(0,0,0,0.08); }
-}
 
 [data-theme="light"] .total-row {
   background: linear-gradient(

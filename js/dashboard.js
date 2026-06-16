@@ -382,12 +382,12 @@ function renderTransactions(transactions) {
     tr.dataset.rowIndex = fullIdx;
     tr.dataset.hash     = hash || '';
     tr.innerHTML = `
-      <td data-label="תאריך">${escHtml(date||'')}</td>
-      <td data-label="שם בית עסק">${escHtml(merchant||'')}</td>
-      <td data-label="סכום" class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>
-      <td data-label="קטגוריה">${escHtml(category||'')}</td>
-      <td data-label="סוג" class="text-muted">${escHtml(type||'')}</td>
-      <td data-label="הערות" class="text-muted">${escHtml(notes||'')}</td>
+      <td>${escHtml(date||'')}</td>
+      <td>${escHtml(merchant||'')}</td>
+      <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>
+      <td>${escHtml(category||'')}</td>
+      <td class="text-muted">${escHtml(type||'')}</td>
+      <td class="text-muted">${escHtml(notes||'')}</td>
       <td class="write-only">
         <button class="btn btn-sm btn-outline-danger delete-txn-btn" title="מחק עסקה">מחק</button>
       </td>`;
@@ -675,15 +675,15 @@ async function loadMonth(monthStr) {
     const transactions  = filterTransactionsByMonth(txData, monthStr);
     const allocationRow = findRowForMonth(allocData, monthStr);
 
+    loading.classList.add('hidden');
+    content.classList.remove('hidden');
+
     renderIncome(incomeRow);
     renderExpenses(transactions);
     renderTransactions(transactions);
     renderAllocation(allocationRow);
 
     document.getElementById('stat-income').textContent = formatShekel(window._dashIncome || 0);
-
-    loading.classList.add('hidden');
-    content.classList.remove('hidden');
   } catch (err) {
     loading.classList.add('hidden');
     errorDiv.innerHTML = `<div class="error-msg">${err.message}</div>`;
@@ -692,8 +692,15 @@ async function loadMonth(monthStr) {
 
 // ── Init ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  document.getElementById('hamburger').addEventListener('click', () =>
-    document.getElementById('sidebar').classList.toggle('open'));
+  const sidebarEl   = document.getElementById('sidebar');
+  const overlayEl   = document.getElementById('sidebar-overlay');
+  const closeSidebar = () => { sidebarEl.classList.remove('open'); overlayEl.classList.remove('show'); };
+  document.getElementById('hamburger').addEventListener('click', () => {
+    sidebarEl.classList.add('open');
+    overlayEl.classList.add('show');
+  });
+  document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
+  overlayEl.addEventListener('click', closeSidebar);
 
   const email = await AuthManager.init();
   if (!email) return;

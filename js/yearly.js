@@ -33,11 +33,11 @@ function renderYearlySummaryTable(months, income, expenses, profit, savingsRate)
     const pc = profit[i] >= 0 ? 'amount-positive' : 'amount-negative';
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td data-label="חודש">${MONTH_NAMES[i]}</td>
-      <td data-label="הכנסות" class="amount-positive">${formatShekel(income[i])}</td>
-      <td data-label="הוצאות" class="amount-negative">${formatShekel(expenses[i])}</td>
-      <td data-label="רווח" class="${pc}">${formatShekel(profit[i])}</td>
-      <td data-label="חיסכון" class="${rc}">${savingsRate[i].toFixed(1)}%</td>`;
+      <td>${MONTH_NAMES[i]}</td>
+      <td class="amount-positive">${formatShekel(income[i])}</td>
+      <td class="amount-negative">${formatShekel(expenses[i])}</td>
+      <td class="${pc}">${formatShekel(profit[i])}</td>
+      <td class="${rc}">${savingsRate[i].toFixed(1)}%</td>`;
     tbody.appendChild(tr);
   });
 
@@ -47,11 +47,11 @@ function renderYearlySummaryTable(months, income, expenses, profit, savingsRate)
     const rc = avgRate >= 20 ? 'rate-good' : avgRate >= 10 ? 'rate-warn' : 'rate-bad';
     const pc = totP >= 0 ? 'amount-positive' : 'amount-negative';
     tfoot.innerHTML = `
-      <td data-label="חודש">סה"כ שנתי</td>
-      <td data-label="הכנסות" class="amount-positive">${formatShekel(totI)}</td>
-      <td data-label="הוצאות" class="amount-negative">${formatShekel(totE)}</td>
-      <td data-label="רווח" class="${pc}">${formatShekel(totP)}</td>
-      <td data-label="חיסכון" class="${rc}">${avgRate.toFixed(1)}%</td>`;
+      <td>סה"כ שנתי</td>
+      <td class="amount-positive">${formatShekel(totI)}</td>
+      <td class="amount-negative">${formatShekel(totE)}</td>
+      <td class="${pc}">${formatShekel(totP)}</td>
+      <td class="${rc}">${avgRate.toFixed(1)}%</td>`;
   }
 }
 
@@ -71,13 +71,13 @@ function renderYoYTable(income, expenses, prevIncome, prevExpenses) {
     const dE = expenses[i] - prevExpenses[i];
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td data-label="חודש">${name}</td>
-      <td data-label="הכנסות ${currentYear}" class="amount-positive">${formatShekel(income[i])}</td>
-      <td data-label="הוצאות ${currentYear}" class="amount-negative">${formatShekel(expenses[i])}</td>
-      <td data-label="הכנסות ${currentYear - 1}" class="amount-positive">${formatShekel(prevIncome[i])}</td>
-      <td data-label="הוצאות ${currentYear - 1}" class="amount-negative">${formatShekel(prevExpenses[i])}</td>
-      <td data-label="△ הכנסות" class="${dI >= 0 ? 'amount-positive' : 'amount-negative'}">${dI >= 0 ? '+' : ''}${formatShekel(dI)}</td>
-      <td data-label="△ הוצאות" class="${dE <= 0 ? 'amount-positive' : 'amount-negative'}">${dE > 0 ? '+' : ''}${formatShekel(dE)}</td>`;
+      <td>${name}</td>
+      <td class="amount-positive">${formatShekel(income[i])}</td>
+      <td class="amount-negative">${formatShekel(expenses[i])}</td>
+      <td class="amount-positive">${formatShekel(prevIncome[i])}</td>
+      <td class="amount-negative">${formatShekel(prevExpenses[i])}</td>
+      <td class="${dI >= 0 ? 'amount-positive' : 'amount-negative'}">${dI >= 0 ? '+' : ''}${formatShekel(dI)}</td>
+      <td class="${dE <= 0 ? 'amount-positive' : 'amount-negative'}">${dE > 0 ? '+' : ''}${formatShekel(dE)}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -125,9 +125,9 @@ function detectRecurring(txData, year) {
   recurring.forEach(item => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td data-label="שם בית עסק">${escHtml(item.merchant)}</td>
-      <td data-label="חודשים" class="text-muted">${item.months} חודשים</td>
-      <td data-label="ממוצע חודשי" class="amount-negative">${formatShekel(item.avg)} / חודש</td>`;
+      <td>${escHtml(item.merchant)}</td>
+      <td class="text-muted">${item.months} חודשים</td>
+      <td class="amount-negative">${formatShekel(item.avg)} / חודש</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -297,8 +297,15 @@ async function loadYearly() {
 
 // ── Init ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  document.getElementById('hamburger').addEventListener('click', () =>
-    document.getElementById('sidebar').classList.toggle('open'));
+  const sidebarEl   = document.getElementById('sidebar');
+  const overlayEl   = document.getElementById('sidebar-overlay');
+  const closeSidebar = () => { sidebarEl.classList.remove('open'); overlayEl.classList.remove('show'); };
+  document.getElementById('hamburger').addEventListener('click', () => {
+    sidebarEl.classList.add('open');
+    overlayEl.classList.add('show');
+  });
+  document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
+  overlayEl.addEventListener('click', closeSidebar);
 
   const email = await AuthManager.init();
   if (!email) return;

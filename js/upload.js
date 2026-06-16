@@ -479,16 +479,16 @@ function renderPreview(rows) {
     const tr = document.createElement('tr');
     tr.dataset.idx = idx;
     tr.innerHTML = `
-      <td data-label="תאריך">${escHtml(date)}</td>
-      <td data-label="שם בית עסק">${escHtml(merchant)}${source ? `<br><small class="text-muted" style="font-size:0.7rem;">${escHtml(source)}</small>` : ''}</td>
-      <td data-label="סכום" class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>
-      <td data-label="קטגוריה">
+      <td>${escHtml(date)}</td>
+      <td>${escHtml(merchant)}${source ? `<br><small class="text-muted" style="font-size:0.7rem;">${escHtml(source)}</small>` : ''}</td>
+      <td class="${amt < 0 ? 'amount-positive' : 'amount-negative'}">${formatShekel(amt)}</td>
+      <td>
         <select class="input-inline cat-select" data-idx="${idx}">
           ${buildCategoryOptions(category)}
         </select>
       </td>
-      <td data-label="סוג" class="text-muted">${escHtml(txnType)}</td>
-      <td data-label="הערות">
+      <td class="text-muted">${escHtml(txnType)}</td>
+      <td>
         <input type="text" class="input-inline notes-input" data-idx="${idx}"
                value="${escHtml(notes)}" placeholder="הערות" />
       </td>
@@ -750,8 +750,15 @@ function confirmSplit() {
 
 // ── Init ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  document.getElementById('hamburger').addEventListener('click', () =>
-    document.getElementById('sidebar').classList.toggle('open'));
+  const sidebarEl   = document.getElementById('sidebar');
+  const overlayEl   = document.getElementById('sidebar-overlay');
+  const closeSidebar = () => { sidebarEl.classList.remove('open'); overlayEl.classList.remove('show'); };
+  document.getElementById('hamburger').addEventListener('click', () => {
+    sidebarEl.classList.add('open');
+    overlayEl.classList.add('show');
+  });
+  document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
+  overlayEl.addEventListener('click', closeSidebar);
 
   const email = await AuthManager.init();
   if (!email) return;
